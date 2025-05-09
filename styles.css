@@ -1,0 +1,119 @@
+/* Estilos generales */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+.navbar {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+}
+
+/* Estilos para pantalla de login */
+#login-screen {
+    max-width: 500px;
+    margin: 100px auto;
+    padding: 30px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+}
+
+#github-login {
+    margin-top: 20px;
+    padding: 10px 20px;
+}
+
+/* Estilos para los paneles */
+#bodega-panel, #fabricacion-panel, #admin-panel {
+    background-color: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+}
+
+/* Estilos para formularios */
+.card {
+    border: none;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    margin-bottom: 30px;
+}
+
+.card-header {
+    background-color: #f1f5f9;
+    font-weight: bold;
+}
+
+/* Estilos para tablas */
+.table-responsive {
+    border-radius: 5px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.03);
+}
+
+.table th {
+    background-color: #f1f5f9;
+    font-weight: 600;
+}
+
+/* Estilos para los items de productos */
+.item-row {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    margin-bottom: 10px;
+}
+
+.item-row:last-child {
+    border-bottom: none;
+}
+
+/* Estilos para botones */
+.btn-primary {
+    background-color: #0d6efd;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-success {
+    background-color: #198754;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+}
+
+/* Estilos para historial de cambios */
+.history-item {
+    border-left: 3px solid #0d6efd;
+    padding-left: 10px;
+    margin-bottom: 10px;
+}
+
+.history-date {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+
+/* Animaciones */
+.fade-in {
+    animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .card-body {
+        padding: 15px;
+    }
+    
+    .btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+}

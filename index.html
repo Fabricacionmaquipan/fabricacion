@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Solicitudes Bodega-Fabricación</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="#">Sistema Solicitudes</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item" id="nav-login">
+                        <a class="nav-link" href="#" id="login-btn">Iniciar Sesión</a>
+                    </li>
+                    <li class="nav-item d-none" id="nav-logout">
+                        <a class="nav-link" href="#" id="logout-btn">Cerrar Sesión</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Pantalla de inicio de sesión -->
+        <div id="login-screen" class="text-center">
+            <h2>Bienvenido al Sistema de Solicitudes</h2>
+            <p>Por favor inicia sesión para continuar</p>
+            <button id="github-login" class="btn btn-dark">Iniciar Sesión con GitHub</button>
+        </div>
+
+        <!-- Panel de Bodega -->
+        <div id="bodega-panel" class="d-none">
+            <h2>Panel de Bodega</h2>
+            <div class="card mb-4">
+                <div class="card-header">
+                    Nueva Solicitud
+                </div>
+                <div class="card-body">
+                    <form id="nueva-solicitud-form">
+                        <div class="mb-3">
+                            <label for="nota-venta" class="form-label">Nota de Venta</label>
+                            <input type="text" class="form-control" id="nota-venta" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
+                            <input type="date" class="form-control" id="fecha-solicitud" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Detalle de lo Solicitado</label>
+                            <div id="items-container">
+                                <div class="item-row">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
+                                        </div>
+                                        <div class="col-md-4 mb-2">
+                                            <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
+                                        </div>
+                                        <div class="col-md-2 mb-2">
+                                            <button type="button" class="btn btn-danger remove-item">Eliminar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-secondary mt-2" id="add-item">Agregar Producto</button>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
+                    </form>
+                </div>
+            </div>
+            
+            <h3>Historial de Solicitudes</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nota Venta</th>
+                            <th>Fecha Solicitud</th>
+                            <th>Estado</th>
+                            <th>Detalle</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-solicitudes-bodega">
+                        <!-- Se llenará con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Panel de Fabricación -->
+        <div id="fabricacion-panel" class="d-none">
+            <h2>Panel de Fabricación</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nota Venta</th>
+                            <th>Fecha Solicitud</th>
+                            <th>Detalle</th>
+                            <th>Estado</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-solicitudes-fabricacion">
+                        <!-- Se llenará con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Panel de Admin -->
+        <div id="admin-panel" class="d-none">
+            <h2>Panel de Administración</h2>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nota Venta</th>
+                            <th>Fecha Solicitud</th>
+                            <th>Detalle</th>
+                            <th>Estado</th>
+                            <th>Observaciones</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-solicitudes-admin">
+                        <!-- Se llenará con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modales para detalles y ediciones -->
+    <div class="modal fade" id="detalle-modal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detalle de Solicitud</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="detalle-modal-body">
+                    <!-- Se llenará con JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Actualizar Estado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="actualizar-estado-form">
+                        <input type="hidden" id="solicitud-id">
+                        <div class="mb-3">
+                            <label for="nuevo-estado" class="form-label">Estado</label>
+                            <select class="form-select" id="nuevo-estado" required>
+                                <option value="Solicitud enviada por bodega">Solicitud enviada por bodega</option>
+                                <option value="En fabricación">En fabricación</option>
+                                <option value="Entregado">Entregado</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="observaciones" class="form-label">Observaciones</label>
+                            <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script src="auth.js"></script>
+    <script src="database.js"></script>
+    <script src="bodega.js"></script>
+    <script src="fabricacion.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
