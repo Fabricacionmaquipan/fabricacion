@@ -1,5 +1,5 @@
 // Configuración de autenticación de GitHub
-const CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID'; // Reemplazar con tu Client ID
+const CLIENT_ID = 'Ov23liKt7FqbxVYYUJRZ'; // Tu Client ID de GitHub
 const REDIRECT_URI = window.location.origin;
 const AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`;
 
