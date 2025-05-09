@@ -1,5 +1,5 @@
 // Configuración de la base de datos en GitHub
-const REPO_OWNER = 'YOUR_GITHUB_USERNAME'; // Reemplazar con tu usuario de GitHub
+const REPO_OWNER = 'Fabricacionmaquipan'; // Tu usuario de GitHub
 const REPO_NAME = 'sistema-solicitudes-datos'; // Nombre del repositorio
 const DATA_FILE = 'solicitudes.json'; // Archivo donde se guardarán los datos
 const HISTORY_FILE = 'historico.json'; // Archivo para el historial de cambios
