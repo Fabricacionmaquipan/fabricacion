@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Solicitudes Bodega-Fabricación</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <script src="github-storage.js"></script>
     <style>
         /* Estilos generales */
         body {
@@ -81,6 +80,18 @@
         .history-date {
             font-size: 0.8rem;
             color: #6c757d;
+        }
+
+        /* Estilos para sincronización */
+        .sync-status {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: none;
         }
     </style>
 </head>
@@ -277,6 +288,11 @@
         </div>
     </div>
 
+    <!-- Indicador de sincronización -->
+    <div class="sync-status" id="sync-status">
+        <span id="sync-message">Sincronizando datos...</span>
+    </div>
+
     <!-- Script de Bootstrap -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
@@ -362,7 +378,10 @@
 
         // Variables globales
         let currentRole = '';
-        let solicitudes = [];
+        let solicitudes = [...solicitudesData]; // Inicializar con datos de ejemplo
+        let syncInterval = null;
+        const syncStatus = document.getElementById('sync-status');
+        const syncMessage = document.getElementById('sync-message');
 
         // Elementos DOM
         const loginScreen = document.getElementById('login-screen');
@@ -394,8 +413,40 @@
         const nuevoEstadoSelect = document.getElementById('nuevo-estado');
         const observacionesText = document.getElementById('observaciones');
 
-        // Las funciones init(), handleNuevaSolicitud() y handleActualizarEstado() 
-        // han sido reemplazadas por las versiones en github-storage.js
+        // Inicializar la aplicación cuando se carga la página
+        document.addEventListener('DOMContentLoaded', () => {
+            // Inicializar la aplicación
+            init();
+        });
+
+        // Función de inicialización
+        async function init() {
+            console.log('Iniciando aplicación...');
+            
+            // Comprobar si hay un rol guardado en localStorage
+            const savedRole = localStorage.getItem('current_role');
+            
+            // Cargar solicitudes desde el localStorage
+            const savedData = localStorage.getItem('solicitudes');
+            if (savedData) {
+                try {
+                    solicitudes = JSON.parse(savedData);
+                } catch (error) {
+                    console.error('Error al cargar datos guardados:', error);
+                }
+            }
+            
+            // Mostrar el panel correspondiente según el rol guardado
+            if (savedRole) {
+                currentRole = savedRole;
+                showPanel(currentRole);
+            } else {
+                showLoginScreen();
+            }
+            
+            // Configurar event listeners
+            setupEventListeners();
+        }
 
         // Configurar los escuchadores de eventos
         function setupEventListeners() {
@@ -616,6 +667,82 @@
             });
         }
 
+        // Manejar el envío del formulario de nueva solicitud
+        async function handleNuevaSolicitud(e) {
+            e.preventDefault();
+            
+            const notaVenta = document.getElementById('nota-venta').value;
+            const fechaSolicitud = document.getElementById('fecha-solicitud').value;
+            
+            // Obtener productos y cantidades
+            const productos = [];
+            const cantidades = [];
+            
+            const productosInputs = document.querySelectorAll('input[name="producto[]"]');
+            const cantidadesInputs = document.querySelectorAll('input[name="cantidad[]"]');
+            
+            for (let i = 0; i < productosInputs.length; i++) {
+                const producto = productosInputs[i].value.trim();
+                const cantidad = parseInt(cantidadesInputs[i].value);
+                
+                if (producto && !isNaN(cantidad) && cantidad > 0) {
+                    productos.push(producto);
+                    cantidades.push(cantidad);
+                }
+            }
+            
+            if (productos.length === 0) {
+                alert('Debe agregar al menos un producto.');
+                return;
+            }
+            
+            // Crear la nueva solicitud
+            const nuevaSolicitud = {
+                id: Date.now().toString(),
+                notaVenta: notaVenta,
+                fechaSolicitud: fechaSolicitud,
+                estado: 'Solicitud enviada por bodega',
+                observaciones: '',
+                items: [],
+                historial: [
+                    {
+                        fecha: new Date().toISOString(),
+                        estado: 'Solicitud enviada por bodega',
+                        observaciones: '',
+                        usuario: 'usuario_bodega'
+                    }
+                ]
+            };
+            
+            // Agregar los productos
+            for (let i = 0; i < productos.length; i++) {
+                nuevaSolicitud.items.push({
+                    producto: productos[i],
+                    cantidad: cantidades[i]
+                });
+            }
+            
+            // Agregar la solicitud a la lista
+            solicitudes.unshift(nuevaSolicitud);
+            
+            // Guardar en localStorage
+            localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
+            
+            // Limpiar el formulario
+            nuevaSolicitudForm.reset();
+            
+            // Limpiar los items excepto el primero
+            const items = document.querySelectorAll('.item-row');
+            for (let i = 1; i < items.length; i++) {
+                items[i].remove();
+            }
+            
+            // Recargar los datos
+            cargarDatosBodega();
+            
+            alert('Solicitud creada correctamente.');
+        }
+
         // Agregar un nuevo item al formulario
         function addItem() {
             const newRow = document.createElement('div');
@@ -647,6 +774,47 @@
                 row.remove();
             } else {
                 alert('Debe haber al menos un producto.');
+            }
+        }
+
+        // Manejar la actualización de estado
+        async function handleActualizarEstado(e) {
+            e.preventDefault();
+            
+            const solicitudId = solicitudIdInput.value;
+            const nuevoEstado = nuevoEstadoSelect.value;
+            const observaciones = observacionesText.value;
+            
+            const solicitud = solicitudes.find(s => s.id === solicitudId);
+            
+            if (solicitud) {
+                const estadoAnterior = solicitud.estado;
+                solicitud.estado = nuevoEstado;
+                solicitud.observaciones = observaciones;
+                
+                // Agregar al historial
+                solicitud.historial.push({
+                    fecha: new Date().toISOString(),
+                    estado: nuevoEstado,
+                    observaciones: observaciones,
+                    usuario: currentRole === 'admin' ? 'usuario_admin' : 'usuario_fabricacion'
+                });
+                
+                // Guardar en localStorage
+                localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
+                
+                // Cerrar el modal
+                const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
+                modal.hide();
+                
+                // Recargar los datos
+                if (currentRole === 'fabricacion') {
+                    cargarDatosFabricacion();
+                } else if (currentRole === 'admin') {
+                    cargarDatosAdmin();
+                }
+                
+                alert('Estado actualizado correctamente.');
             }
         }
 
@@ -778,6 +946,74 @@
             
             return date.toLocaleString();
         }
+
+        // Función para exportar datos a un archivo JSON
+        function exportarDatos() {
+            const dataStr = JSON.stringify(solicitudes, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const dataUrl = URL.createObjectURL(dataBlob);
+            
+            const downloadLink = document.createElement('a');
+            downloadLink.href = dataUrl;
+            downloadLink.download = `solicitudes_${new Date().toISOString().substr(0, 10)}.json`;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+
+        // Función para importar datos desde un archivo JSON
+        function importarDatos(file) {
+            const reader = new FileReader();
+            
+            reader.onload = (event) => {
+                try {
+                    const importedData = JSON.parse(event.target.result);
+                    
+                    if (Array.isArray(importedData)) {
+                        solicitudes = importedData;
+                        localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
+                        
+                        // Actualizar la vista según el rol actual
+                        if (currentRole === 'bodega') {
+                            cargarDatosBodega();
+                        } else if (currentRole === 'fabricacion') {
+                            cargarDatosFabricacion();
+                        } else if (currentRole === 'admin') {
+                            cargarDatosAdmin();
+                        }
+                        
+                        alert('Datos importados correctamente.');
+                    } else {
+                        alert('El archivo no contiene un formato válido.');
+                    }
+                } catch (error) {
+                    console.error('Error al importar datos:', error);
+                    alert('Error al procesar el archivo.');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        // Compartir datos entre sesiones
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'solicitudes' && event.newValue) {
+                try {
+                    solicitudes = JSON.parse(event.newValue);
+                    
+                    // Actualizar la vista según el rol actual
+                    if (currentRole === 'bodega') {
+                        cargarDatosBodega();
+                    } else if (currentRole === 'fabricacion') {
+                        cargarDatosFabricacion();
+                    } else if (currentRole === 'admin') {
+                        cargarDatosAdmin();
+                    }
+                } catch (error) {
+                    console.error('Error al procesar cambios en localStorage:', error);
+                }
+            }
+        });
     </script>
 </body>
 </html>
