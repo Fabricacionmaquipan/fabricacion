@@ -1,7 +1,7 @@
 // Configuración de autenticación de GitHub
 const CLIENT_ID = 'Ov23liKt7FqbxVYYUJRZ'; // Tu Client ID de GitHub
-const REDIRECT_URI = window.location.origin;
-const AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`;
+const REDIRECT_URI = 'https://fabricacionmaquipan.github.io/fabricacion/';
+const AUTH_URL = `https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=repo`;
 
 // Roles de usuario (en una aplicación real esto vendría de una base de datos)
 const USUARIOS = {
@@ -41,18 +41,22 @@ function init() {
 
 // Comprobar si el usuario está autenticado
 function checkAuth() {
+    console.log("Iniciando checkAuth...");
     // Comprobar si hay un token en localStorage
     const token = localStorage.getItem('github_token');
     if (token) {
+        console.log("Token encontrado:", token);
         // En una aplicación real, validaríamos el token con GitHub
         // Para este ejemplo, simularemos un usuario autenticado
         simulateLogin();
     } else {
+        console.log("No hay token, verificando código en URL");
         // Comprobar si hay un código de autorización en la URL (después de la redirección de GitHub)
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         
         if (code) {
+            console.log("Código de autorización encontrado:", code);
             // En una aplicación real, intercambiaríamos este código por un token
             // Para este ejemplo, simularemos que obtuvimos un token
             localStorage.setItem('github_token', 'fake_token_' + Date.now());
@@ -60,6 +64,7 @@ function checkAuth() {
             history.replaceState({}, document.title, window.location.pathname);
             simulateLogin();
         } else {
+            console.log("No hay código, mostrando pantalla de login");
             showLoginScreen();
         }
     }
@@ -67,29 +72,38 @@ function checkAuth() {
 
 // Configurar los event listeners
 function setupEventListeners() {
-    githubLoginBtn.addEventListener('click', () => {
-        window.location.href = AUTH_URL;
-    });
+    if (githubLoginBtn) {
+        githubLoginBtn.addEventListener('click', () => {
+            console.log("Redirigiendo a GitHub OAuth:", AUTH_URL);
+            window.location.href = AUTH_URL;
+        });
+    }
     
-    loginBtn.addEventListener('click', () => {
-        window.location.href = AUTH_URL;
-    });
+    if (loginBtn) {
+        loginBtn.addEventListener('click', () => {
+            console.log("Redirigiendo a GitHub OAuth desde botón de navbar:", AUTH_URL);
+            window.location.href = AUTH_URL;
+        });
+    }
     
-    logoutBtn.addEventListener('click', logout);
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', logout);
+    }
 }
 
 // Mostrar pantalla de login
 function showLoginScreen() {
-    loginScreen.classList.remove('d-none');
-    bodegaPanel.classList.add('d-none');
-    fabricacionPanel.classList.add('d-none');
-    adminPanel.classList.add('d-none');
-    navLogin.classList.remove('d-none');
-    navLogout.classList.add('d-none');
+    if (loginScreen) loginScreen.classList.remove('d-none');
+    if (bodegaPanel) bodegaPanel.classList.add('d-none');
+    if (fabricacionPanel) fabricacionPanel.classList.add('d-none');
+    if (adminPanel) adminPanel.classList.add('d-none');
+    if (navLogin) navLogin.classList.remove('d-none');
+    if (navLogout) navLogout.classList.add('d-none');
 }
 
 // Simular inicio de sesión (para este ejemplo)
 function simulateLogin() {
+    console.log("Simulando inicio de sesión...");
     // En una aplicación real, obtendríamos la información del usuario de GitHub
     // y verificaríamos su rol en nuestra base de datos
     
@@ -102,6 +116,8 @@ function simulateLogin() {
         const roles = ['bodega', 'fabricacion', 'admin'];
         role = roles[Math.floor(Math.random() * roles.length)];
     }
+    
+    console.log("Rol seleccionado:", role);
     
     // Asignar usuario según el rol
     let username;
@@ -122,6 +138,8 @@ function simulateLogin() {
         ...USUARIOS[username]
     };
     
+    console.log("Usuario actual:", currentUser);
+    
     // Guardar el usuario en localStorage
     localStorage.setItem('current_user', JSON.stringify(currentUser));
     
@@ -130,38 +148,46 @@ function simulateLogin() {
 
 // Mostrar el panel correspondiente al rol del usuario
 function showUserPanel(role) {
-    loginScreen.classList.add('d-none');
-    navLogin.classList.add('d-none');
-    navLogout.classList.remove('d-none');
+    console.log("Mostrando panel para rol:", role);
+    if (loginScreen) loginScreen.classList.add('d-none');
+    if (navLogin) navLogin.classList.add('d-none');
+    if (navLogout) navLogout.classList.remove('d-none');
     
     // Mostrar el panel correspondiente
     switch (role) {
         case 'bodega':
-            bodegaPanel.classList.remove('d-none');
-            fabricacionPanel.classList.add('d-none');
-            adminPanel.classList.add('d-none');
+            if (bodegaPanel) bodegaPanel.classList.remove('d-none');
+            if (fabricacionPanel) fabricacionPanel.classList.add('d-none');
+            if (adminPanel) adminPanel.classList.add('d-none');
             // Cargar datos de bodega
-            loadBodegaData();
+            if (window.bodega && window.bodega.loadData) {
+                window.bodega.loadData();
+            }
             break;
         case 'fabricacion':
-            bodegaPanel.classList.add('d-none');
-            fabricacionPanel.classList.remove('d-none');
-            adminPanel.classList.add('d-none');
+            if (bodegaPanel) bodegaPanel.classList.add('d-none');
+            if (fabricacionPanel) fabricacionPanel.classList.remove('d-none');
+            if (adminPanel) adminPanel.classList.add('d-none');
             // Cargar datos de fabricación
-            loadFabricacionData();
+            if (window.fabricacion && window.fabricacion.loadData) {
+                window.fabricacion.loadData();
+            }
             break;
         case 'admin':
-            bodegaPanel.classList.add('d-none');
-            fabricacionPanel.classList.add('d-none');
-            adminPanel.classList.remove('d-none');
+            if (bodegaPanel) bodegaPanel.classList.add('d-none');
+            if (fabricacionPanel) fabricacionPanel.classList.add('d-none');
+            if (adminPanel) adminPanel.classList.remove('d-none');
             // Cargar datos de admin
-            loadAdminData();
+            if (window.admin && window.admin.loadData) {
+                window.admin.loadData();
+            }
             break;
     }
 }
 
 // Cerrar sesión
 function logout() {
+    console.log("Cerrando sesión...");
     localStorage.removeItem('github_token');
     localStorage.removeItem('current_user');
     currentUser = null;
