@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Solicitudes Bodega-Fabricación</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
     <style>
         /* Estilos generales */
         body {
@@ -92,6 +97,26 @@
             background-color: #f8f9fa;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             display: none;
+            z-index: 1000;
+        }
+        
+        .sync-status.active {
+            display: block;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 0.2em solid currentColor;
+            border-right-color: transparent;
+            border-radius: 50%;
+            animation: spinner-border .75s linear infinite;
+            margin-right: 0.5rem;
+        }
+        
+        @keyframes spinner-border {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -290,6 +315,7 @@
 
     <!-- Indicador de sincronización -->
     <div class="sync-status" id="sync-status">
+        <div class="loading-spinner"></div>
         <span id="sync-message">Sincronizando datos...</span>
     </div>
 
@@ -298,88 +324,28 @@
     
     <!-- Script principal de la aplicación -->
     <script>
-        // Datos de ejemplo para pruebas
-        const solicitudesData = [
-            {
-                id: '1683456789012',
-                notaVenta: 'NV-2023-001',
-                fechaSolicitud: '2023-05-07',
-                estado: 'Solicitud enviada por bodega',
-                observaciones: '',
-                items: [
-                    { producto: 'Mesa de centro', cantidad: 2 },
-                    { producto: 'Silla de comedor', cantidad: 8 }
-                ],
-                historial: [
-                    {
-                        fecha: '2023-05-07T10:30:00Z',
-                        estado: 'Solicitud enviada por bodega',
-                        observaciones: '',
-                        usuario: 'usuario_bodega'
-                    }
-                ]
-            },
-            {
-                id: '1683556789012',
-                notaVenta: 'NV-2023-002',
-                fechaSolicitud: '2023-05-08',
-                estado: 'En fabricación',
-                observaciones: 'Pendiente por falta de material',
-                items: [
-                    { producto: 'Estantería', cantidad: 1 },
-                    { producto: 'Escritorio', cantidad: 1 }
-                ],
-                historial: [
-                    {
-                        fecha: '2023-05-08T09:15:00Z',
-                        estado: 'Solicitud enviada por bodega',
-                        observaciones: '',
-                        usuario: 'usuario_bodega'
-                    },
-                    {
-                        fecha: '2023-05-09T11:20:00Z',
-                        estado: 'En fabricación',
-                        observaciones: 'Pendiente por falta de material',
-                        usuario: 'usuario_fabricacion'
-                    }
-                ]
-            },
-            {
-                id: '1683656789012',
-                notaVenta: 'NV-2023-003',
-                fechaSolicitud: '2023-05-09',
-                estado: 'Entregado',
-                observaciones: 'Entregado completo',
-                items: [
-                    { producto: 'Cama king', cantidad: 1 }
-                ],
-                historial: [
-                    {
-                        fecha: '2023-05-09T08:45:00Z',
-                        estado: 'Solicitud enviada por bodega',
-                        observaciones: '',
-                        usuario: 'usuario_bodega'
-                    },
-                    {
-                        fecha: '2023-05-10T10:30:00Z',
-                        estado: 'En fabricación',
-                        observaciones: '',
-                        usuario: 'usuario_fabricacion'
-                    },
-                    {
-                        fecha: '2023-05-12T14:20:00Z',
-                        estado: 'Entregado',
-                        observaciones: 'Entregado completo',
-                        usuario: 'usuario_fabricacion'
-                    }
-                ]
-            }
-        ];
+        // Inicializar Firebase
+        // Reemplaza esta configuración con la que te proporciona Firebase
+        const firebaseConfig = {
+    apiKey: "AIzaSyB4M9RcUh1Vv18B63UVnnZYaOtj-RT_FEM",
+    authDomain: "sistema-de-solicitudes-d1b70.firebaseapp.com",
+    databaseURL: "https://sistema-de-solicitudes-d1b70-default-rtdb.firebaseio.com",
+    projectId: "sistema-de-solicitudes-d1b70",
+    storageBucket: "sistema-de-solicitudes-d1b70.firebasestorage.app",
+    messagingSenderId: "906171362204",
+    appId: "1:906171362204:web:0386887ab9e36b523f3659"
+};
+        
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        
+        // Referencia a la base de datos
+        const database = firebase.database();
+        const solicitudesRef = database.ref('solicitudes');
 
         // Variables globales
         let currentRole = '';
-        let solicitudes = [...solicitudesData]; // Inicializar con datos de ejemplo
-        let syncInterval = null;
+        let solicitudes = [];
         const syncStatus = document.getElementById('sync-status');
         const syncMessage = document.getElementById('sync-message');
 
@@ -414,29 +380,41 @@
         const observacionesText = document.getElementById('observaciones');
 
         // Inicializar la aplicación cuando se carga la página
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializar la aplicación
-            init();
-        });
+        document.addEventListener('DOMContentLoaded', init);
 
         // Función de inicialización
-        async function init() {
-            console.log('Iniciando aplicación...');
+        function init() {
+            // Mostrar estado de sincronización
+            mostrarSincronizacion('Conectando con la base de datos...');
+            
+            // Escuchar cambios en la base de datos
+            solicitudesRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    solicitudes = Object.values(data);
+                    
+                    // Actualizar la vista según el rol actual
+                    if (currentRole === 'bodega') {
+                        cargarDatosBodega();
+                    } else if (currentRole === 'fabricacion') {
+                        cargarDatosFabricacion();
+                    } else if (currentRole === 'admin') {
+                        cargarDatosAdmin();
+                    }
+                    
+                    ocultarSincronizacion();
+                } else {
+                    solicitudes = [];
+                    ocultarSincronizacion();
+                }
+            }, (error) => {
+                console.error('Error al leer datos:', error);
+                mostrarSincronizacion('Error al conectar con la base de datos', true);
+                setTimeout(ocultarSincronizacion, 3000);
+            });
             
             // Comprobar si hay un rol guardado en localStorage
             const savedRole = localStorage.getItem('current_role');
-            
-            // Cargar solicitudes desde el localStorage
-            const savedData = localStorage.getItem('solicitudes');
-            if (savedData) {
-                try {
-                    solicitudes = JSON.parse(savedData);
-                } catch (error) {
-                    console.error('Error al cargar datos guardados:', error);
-                }
-            }
-            
-            // Mostrar el panel correspondiente según el rol guardado
             if (savedRole) {
                 currentRole = savedRole;
                 showPanel(currentRole);
@@ -446,6 +424,25 @@
             
             // Configurar event listeners
             setupEventListeners();
+        }
+
+        // Mostrar estado de sincronización
+        function mostrarSincronizacion(mensaje, isError = false) {
+            syncMessage.textContent = mensaje;
+            syncStatus.classList.add('active');
+            
+            if (isError) {
+                syncStatus.style.backgroundColor = '#f8d7da';
+                syncStatus.style.color = '#721c24';
+            } else {
+                syncStatus.style.backgroundColor = '#f8f9fa';
+                syncStatus.style.color = '#212529';
+            }
+        }
+
+        // Ocultar estado de sincronización
+        function ocultarSincronizacion() {
+            syncStatus.classList.remove('active');
         }
 
         // Configurar los escuchadores de eventos
@@ -671,6 +668,8 @@
         async function handleNuevaSolicitud(e) {
             e.preventDefault();
             
+            mostrarSincronizacion('Creando solicitud...');
+            
             const notaVenta = document.getElementById('nota-venta').value;
             const fechaSolicitud = document.getElementById('fecha-solicitud').value;
             
@@ -693,6 +692,7 @@
             
             if (productos.length === 0) {
                 alert('Debe agregar al menos un producto.');
+                ocultarSincronizacion();
                 return;
             }
             
@@ -722,25 +722,26 @@
                 });
             }
             
-            // Agregar la solicitud a la lista
-            solicitudes.unshift(nuevaSolicitud);
-            
-            // Guardar en localStorage
-            localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
-            
-            // Limpiar el formulario
-            nuevaSolicitudForm.reset();
-            
-            // Limpiar los items excepto el primero
-            const items = document.querySelectorAll('.item-row');
-            for (let i = 1; i < items.length; i++) {
-                items[i].remove();
+            try {
+                // Guardar en Firebase
+                await solicitudesRef.child(nuevaSolicitud.id).set(nuevaSolicitud);
+                
+                // Limpiar el formulario
+                nuevaSolicitudForm.reset();
+                
+                // Limpiar los items excepto el primero
+                const items = document.querySelectorAll('.item-row');
+                for (let i = 1; i < items.length; i++) {
+                    items[i].remove();
+                }
+                
+                alert('Solicitud creada correctamente.');
+                ocultarSincronizacion();
+            } catch (error) {
+                console.error('Error al guardar la solicitud:', error);
+                alert('Error al crear la solicitud. Por favor, inténtalo de nuevo.');
+                ocultarSincronizacion();
             }
-            
-            // Recargar los datos
-            cargarDatosBodega();
-            
-            alert('Solicitud creada correctamente.');
         }
 
         // Agregar un nuevo item al formulario
@@ -781,6 +782,8 @@
         async function handleActualizarEstado(e) {
             e.preventDefault();
             
+            mostrarSincronizacion('Actualizando estado...');
+            
             const solicitudId = solicitudIdInput.value;
             const nuevoEstado = nuevoEstadoSelect.value;
             const observaciones = observacionesText.value;
@@ -788,33 +791,39 @@
             const solicitud = solicitudes.find(s => s.id === solicitudId);
             
             if (solicitud) {
-                const estadoAnterior = solicitud.estado;
-                solicitud.estado = nuevoEstado;
-                solicitud.observaciones = observaciones;
-                
-                // Agregar al historial
-                solicitud.historial.push({
-                    fecha: new Date().toISOString(),
-                    estado: nuevoEstado,
-                    observaciones: observaciones,
-                    usuario: currentRole === 'admin' ? 'usuario_admin' : 'usuario_fabricacion'
-                });
-                
-                // Guardar en localStorage
-                localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
-                
-                // Cerrar el modal
-                const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
-                modal.hide();
-                
-                // Recargar los datos
-                if (currentRole === 'fabricacion') {
-                    cargarDatosFabricacion();
-                } else if (currentRole === 'admin') {
-                    cargarDatosAdmin();
+                try {
+                    // Crear una copia de la solicitud para actualizar
+                    const solicitudActualizada = {...solicitud};
+                    
+                    // Actualizar estado y observaciones
+                    solicitudActualizada.estado = nuevoEstado;
+                    solicitudActualizada.observaciones = observaciones;
+                    
+                    // Agregar al historial
+                    solicitudActualizada.historial.push({
+                        fecha: new Date().toISOString(),
+                        estado: nuevoEstado,
+                        observaciones: observaciones,
+                        usuario: currentRole === 'admin' ? 'usuario_admin' : 'usuario_fabricacion'
+                    });
+                    
+                    // Guardar en Firebase
+                    await solicitudesRef.child(solicitudId).update(solicitudActualizada);
+                    
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
+                    modal.hide();
+                    
+                    alert('Estado actualizado correctamente.');
+                    ocultarSincronizacion();
+                } catch (error) {
+                    console.error('Error al actualizar el estado:', error);
+                    alert('Error al actualizar el estado. Por favor, inténtalo de nuevo.');
+                    ocultarSincronizacion();
                 }
-                
-                alert('Estado actualizado correctamente.');
+            } else {
+                alert('No se encontró la solicitud.');
+                ocultarSincronizacion();
             }
         }
 
@@ -946,74 +955,6 @@
             
             return date.toLocaleString();
         }
-
-        // Función para exportar datos a un archivo JSON
-        function exportarDatos() {
-            const dataStr = JSON.stringify(solicitudes, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-            const dataUrl = URL.createObjectURL(dataBlob);
-            
-            const downloadLink = document.createElement('a');
-            downloadLink.href = dataUrl;
-            downloadLink.download = `solicitudes_${new Date().toISOString().substr(0, 10)}.json`;
-            document.body.appendChild(downloadLink);
-            downloadLink.click();
-            document.body.removeChild(downloadLink);
-        }
-
-        // Función para importar datos desde un archivo JSON
-        function importarDatos(file) {
-            const reader = new FileReader();
-            
-            reader.onload = (event) => {
-                try {
-                    const importedData = JSON.parse(event.target.result);
-                    
-                    if (Array.isArray(importedData)) {
-                        solicitudes = importedData;
-                        localStorage.setItem('solicitudes', JSON.stringify(solicitudes));
-                        
-                        // Actualizar la vista según el rol actual
-                        if (currentRole === 'bodega') {
-                            cargarDatosBodega();
-                        } else if (currentRole === 'fabricacion') {
-                            cargarDatosFabricacion();
-                        } else if (currentRole === 'admin') {
-                            cargarDatosAdmin();
-                        }
-                        
-                        alert('Datos importados correctamente.');
-                    } else {
-                        alert('El archivo no contiene un formato válido.');
-                    }
-                } catch (error) {
-                    console.error('Error al importar datos:', error);
-                    alert('Error al procesar el archivo.');
-                }
-            };
-            
-            reader.readAsText(file);
-        }
-
-        // Compartir datos entre sesiones
-        window.addEventListener('storage', (event) => {
-            if (event.key === 'solicitudes' && event.newValue) {
-                try {
-                    solicitudes = JSON.parse(event.newValue);
-                    
-                    // Actualizar la vista según el rol actual
-                    if (currentRole === 'bodega') {
-                        cargarDatosBodega();
-                    } else if (currentRole === 'fabricacion') {
-                        cargarDatosFabricacion();
-                    } else if (currentRole === 'admin') {
-                        cargarDatosAdmin();
-                    }
-                } catch (error) {
-                    console.error('Error al procesar cambios en localStorage:', error);
-                }
-            }
-        });
     </script>
 </body>
 </html>
