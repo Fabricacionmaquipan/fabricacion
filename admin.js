@@ -1,37 +1,40 @@
 // Elementos DOM
 const tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
-const actualizarEstadoModal = document.getElementById('actualizar-estado-modal');
-const actualizarEstadoForm = document.getElementById('actualizar-estado-form');
-const solicitudIdInput = document.getElementById('solicitud-id');
-const nuevoEstadoSelect = document.getElementById('nuevo-estado');
-const observacionesText = document.getElementById('observaciones');
-const detalleModal = document.getElementById('detalle-modal');
-const detalleModalBody = document.getElementById('detalle-modal-body');
+// Usamos variables con nombres específicos para evitar conflictos
+const detalleModalAdmin = document.getElementById('detalle-modal');
+const detalleModalBodyAdmin = document.getElementById('detalle-modal-body');
+const actualizarEstadoModalAdmin = document.getElementById('actualizar-estado-modal');
+const actualizarEstadoFormAdmin = document.getElementById('actualizar-estado-form');
+const solicitudIdInputAdmin = document.getElementById('solicitud-id');
+const nuevoEstadoSelectAdmin = document.getElementById('nuevo-estado');
+const observacionesTextAdmin = document.getElementById('observaciones');
 
 // Inicializar las funciones de admin
 function initAdmin() {
-    setupEventListeners();
+    setupEventListenersAdmin();
 }
 
 // Configurar event listeners
-function setupEventListeners() {
-    if (actualizarEstadoForm) {
-        actualizarEstadoForm.addEventListener('submit', handleActualizarEstado);
+function setupEventListenersAdmin() {
+    if (actualizarEstadoFormAdmin) {
+        actualizarEstadoFormAdmin.addEventListener('submit', handleActualizarEstadoAdmin);
     }
     
     // Listener para botones de cambio de estado
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-cambiar-estado')) {
+        if (e.target && e.target.classList.contains('btn-cambiar-estado') && 
+            e.target.closest('#admin-panel')) {
             const solicitudId = e.target.getAttribute('data-id');
-            showActualizarEstadoModal(solicitudId);
+            showActualizarEstadoModalAdmin(solicitudId);
         }
     });
     
     // Listener para botones de detalle
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-detalle')) {
+        if (e.target && e.target.classList.contains('btn-detalle') && 
+            e.target.closest('#admin-panel')) {
             const solicitudId = e.target.getAttribute('data-id');
-            showDetalle(solicitudId);
+            showDetalleAdmin(solicitudId);
         }
     });
 }
@@ -40,7 +43,7 @@ function setupEventListeners() {
 async function loadAdminData() {
     try {
         const solicitudes = await window.db.loadSolicitudes();
-        renderTablaSolicitudes(solicitudes);
+        renderTablaSolicitudesAdmin(solicitudes);
     } catch (error) {
         console.error('Error al cargar datos de admin:', error);
         alert('Error al cargar los datos. Por favor, inténtalo de nuevo.');
@@ -48,7 +51,7 @@ async function loadAdminData() {
 }
 
 // Renderizar la tabla de solicitudes
-function renderTablaSolicitudes(solicitudes) {
+function renderTablaSolicitudesAdmin(solicitudes) {
     if (!tablaSolicitudesAdmin) return;
     
     tablaSolicitudesAdmin.innerHTML = '';
@@ -90,26 +93,26 @@ function renderTablaSolicitudes(solicitudes) {
 }
 
 // Mostrar el modal para actualizar estado
-async function showActualizarEstadoModal(solicitudId) {
+async function showActualizarEstadoModalAdmin(solicitudId) {
     try {
         const solicitudes = await window.db.loadSolicitudes();
         const solicitud = solicitudes.find(s => s.id === solicitudId);
         
         if (solicitud) {
-            solicitudIdInput.value = solicitudId;
+            solicitudIdInputAdmin.value = solicitudId;
             
             // Establecer el estado actual
-            for (let i = 0; i < nuevoEstadoSelect.options.length; i++) {
-                if (nuevoEstadoSelect.options[i].value === solicitud.estado) {
-                    nuevoEstadoSelect.selectedIndex = i;
+            for (let i = 0; i < nuevoEstadoSelectAdmin.options.length; i++) {
+                if (nuevoEstadoSelectAdmin.options[i].value === solicitud.estado) {
+                    nuevoEstadoSelectAdmin.selectedIndex = i;
                     break;
                 }
             }
             
-            observacionesText.value = solicitud.observaciones || '';
+            observacionesTextAdmin.value = solicitud.observaciones || '';
             
             // Mostrar el modal
-            const modal = new bootstrap.Modal(actualizarEstadoModal);
+            const modal = new bootstrap.Modal(actualizarEstadoModalAdmin);
             modal.show();
         } else {
             alert('No se encontró la solicitud.');
@@ -121,13 +124,13 @@ async function showActualizarEstadoModal(solicitudId) {
 }
 
 // Manejar la actualización de estado
-async function handleActualizarEstado(e) {
+async function handleActualizarEstadoAdmin(e) {
     e.preventDefault();
     
     try {
-        const solicitudId = solicitudIdInput.value;
-        const nuevoEstado = nuevoEstadoSelect.value;
-        const observaciones = observacionesText.value;
+        const solicitudId = solicitudIdInputAdmin.value;
+        const nuevoEstado = nuevoEstadoSelectAdmin.value;
+        const observaciones = observacionesTextAdmin.value;
         
         // Actualizar el estado
         const actualizado = await window.db.actualizarEstadoSolicitud(solicitudId, nuevoEstado, observaciones);
@@ -136,7 +139,7 @@ async function handleActualizarEstado(e) {
             alert('Estado actualizado correctamente.');
             
             // Cerrar el modal
-            const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
+            const modal = bootstrap.Modal.getInstance(actualizarEstadoModalAdmin);
             modal.hide();
             
             // Recargar los datos
@@ -151,14 +154,14 @@ async function handleActualizarEstado(e) {
 }
 
 // Mostrar detalle de una solicitud
-async function showDetalle(solicitudId) {
+async function showDetalleAdmin(solicitudId) {
     try {
         const solicitudes = await window.db.loadSolicitudes();
         const solicitud = solicitudes.find(s => s.id === solicitudId);
         
         if (solicitud) {
             // Llenar el modal con los detalles
-            detalleModalBody.innerHTML = `
+            detalleModalBodyAdmin.innerHTML = `
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>ID:</strong> ${solicitud.id}
@@ -215,7 +218,7 @@ async function showDetalle(solicitudId) {
             `;
             
             // Mostrar el modal
-            const modal = new bootstrap.Modal(detalleModal);
+            const modal = new bootstrap.Modal(detalleModalAdmin);
             modal.show();
         } else {
             alert('No se encontró la solicitud.');
