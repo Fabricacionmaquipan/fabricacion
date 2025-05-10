@@ -3,168 +3,333 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Solicitudes Bodega-Fabricación</title>
+    <title>Sistema de Solicitudes</title>
+    <!-- Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Montserrat y Roboto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
-    <!-- Estilos CSS -->
+    <!-- Estilos CSS personalizados -->
     <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
-            <a class="navbar-brand" href="#">Sistema Solicitudes</a>
+    <!-- Barra de navegación principal -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-boxes me-2"></i>
+                <span>Sistema de Solicitudes</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item" id="user-info" style="display: none;">
-                        <span class="nav-link text-white">Usuario: <span id="user-role-display"></span></span>
+                        <span class="nav-link">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span id="user-role-display"></span>
+                        </span>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="#" id="logout-btn" style="display: none;">Cerrar Sesión</a>
+                        <a class="nav-link d-flex align-items-center" href="#" id="logout-btn" style="display: none;">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container mt-4">
-        <!-- Pantalla de selección de rol -->
-        <div id="login-screen" class="text-center">
-            <h2>Bienvenido al Sistema de Solicitudes</h2>
-            <p>Por favor selecciona un rol para continuar</p>
-            
-            <div class="card mx-auto">
-                <div class="card-body">
-                    <div class="mb-3">
-                        <label for="role-select" class="form-label">Selecciona tu rol:</label>
-                        <select class="form-select" id="role-select">
-                            <option value="">-- Seleccionar rol --</option>
-                            <option value="bodega">Bodega</option>
-                            <option value="fabricacion">Fabricación</option>
-                            <option value="admin">Administrador</option>
-                        </select>
+    <div class="content-wrapper">
+        <div class="container py-4">
+            <!-- Pantalla de selección de rol -->
+            <div id="login-screen" class="text-center">
+                <div class="login-container">
+                    <div class="login-header mb-4">
+                        <div class="app-icon mb-3">
+                            <i class="fas fa-cubes"></i>
+                        </div>
+                        <h2>Bienvenido</h2>
+                        <p class="text-muted">Selecciona tu rol para continuar</p>
                     </div>
-                    <button type="button" class="btn btn-primary w-100" id="login-button">Ingresar</button>
+                    
+                    <div class="login-form">
+                        <div class="mb-4">
+                            <label for="role-select" class="form-label">Tu rol en el sistema:</label>
+                            <select class="form-select form-select-lg" id="role-select">
+                                <option value="">-- Seleccionar rol --</option>
+                                <option value="bodega">Bodega</option>
+                                <option value="fabricacion">Fabricación</option>
+                                <option value="admin">Administrador</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-lg w-100" id="login-button">
+                            Ingresar <i class="fas fa-arrow-right ms-1"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Panel de Bodega -->
-        <div id="bodega-panel" style="display: none;">
-            <h2>Panel de Bodega</h2>
-            <div class="card mb-4">
-                <div class="card-header">
-                    Nueva Solicitud
+            <!-- Panel de Bodega -->
+            <div id="bodega-panel" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                    <h2 class="panel-title mb-0">
+                        <i class="fas fa-warehouse me-2"></i>Panel de Bodega
+                    </h2>
+                    
+                    <div class="d-flex gap-2 mt-2 mt-md-0">
+                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
+                            <i class="fas fa-plus-circle me-1"></i> Nueva Solicitud
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#historial-bodega">
+                            <i class="fas fa-list me-1"></i> Historial
+                        </button>
+                    </div>
                 </div>
-                <div class="card-body">
-                    <form id="nueva-solicitud-form">
-                        <div class="mb-3">
-                            <label for="nota-venta" class="form-label">Nota de Venta</label>
-                            <input type="text" class="form-control" id="nota-venta" required>
+                
+                <!-- Formulario de nueva solicitud -->
+                <div class="collapse show" id="nueva-solicitud-container">
+                    <div class="card card-form mb-4">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nueva Solicitud</h5>
+                                <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
-                            <input type="date" class="form-control" id="fecha-solicitud" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Detalle de lo Solicitado</label>
-                            <div id="items-container">
-                                <div class="item-row">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-2">
-                                            <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
-                                        </div>
-                                        <div class="col-md-4 mb-2">
-                                            <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
-                                        </div>
-                                        <div class="col-md-2 mb-2">
-                                            <button type="button" class="btn btn-danger remove-item">Eliminar</button>
+                        <div class="card-body">
+                            <form id="nueva-solicitud-form">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="nota-venta" class="form-label">Nota de Venta</label>
+                                        <input type="text" class="form-control" id="nota-venta" placeholder="Ingrese número de nota" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
+                                        <input type="date" class="form-control" id="fecha-solicitud" required>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">Productos solicitados</label>
+                                        <button type="button" class="btn btn-sm btn-primary" id="add-item">
+                                            <i class="fas fa-plus me-1"></i> Agregar Producto
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="items-container" id="items-container">
+                                        <div class="item-row">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-6">
+                                                    <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-outline-danger w-100 remove-item">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <button type="button" class="btn btn-secondary mt-2" id="add-item">Agregar Producto</button>
+                                
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-1"></i> Enviar Solicitud
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                        <button type="submit" class="btn btn-primary">Enviar Solicitud</button>
-                    </form>
+                    </div>
+                </div>
+                
+                <!-- Historial de solicitudes -->
+                <div class="collapse show" id="historial-bodega">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Solicitudes</h5>
+                                <div class="d-flex gap-2">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" placeholder="Buscar..." id="buscar-solicitud">
+                                        <button class="btn btn-outline-secondary" type="button">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nota Venta</th>
+                                        <th>Fecha</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-solicitudes-bodega">
+                                    <!-- Se llenará con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer text-center p-2">
+                            <small class="text-muted">Mostrando todas las solicitudes</small>
+                        </div>
+                    </div>
                 </div>
             </div>
-            
-            <h3>Historial de Solicitudes</h3>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nota Venta</th>
-                            <th>Fecha Solicitud</th>
-                            <th>Estado</th>
-                            <th>Detalle</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-solicitudes-bodega">
-                        <!-- Se llenará con JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- Panel de Fabricación -->
-        <div id="fabricacion-panel" style="display: none;">
-            <h2>Panel de Fabricación</h2>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nota Venta</th>
-                            <th>Fecha Solicitud</th>
-                            <th>Detalle</th>
-                            <th>Estado</th>
-                            <th>Observaciones</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-solicitudes-fabricacion">
-                        <!-- Se llenará con JavaScript -->
-                    </tbody>
-                </table>
+            <!-- Panel de Fabricación -->
+            <div id="fabricacion-panel" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="panel-title mb-0">
+                        <i class="fas fa-industry me-2"></i>Panel de Fabricación
+                    </h2>
+                    
+                    <div class="d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Filtrar
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item active" href="#">Todas</a></li>
+                                <li><a class="dropdown-item" href="#">Pendientes</a></li>
+                                <li><a class="dropdown-item" href="#">En Fabricación</a></li>
+                                <li><a class="dropdown-item" href="#">Entregadas</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <input type="text" class="form-control" placeholder="Buscar...">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nota Venta</th>
+                                    <th>Fecha</th>
+                                    <th>Detalle</th>
+                                    <th>Estado</th>
+                                    <th>Observaciones</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-solicitudes-fabricacion">
+                                <!-- Se llenará con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center p-2">
+                        <small class="text-muted">Mostrando todas las solicitudes</small>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Panel de Admin -->
-        <div id="admin-panel" style="display: none;">
-            <h2>Panel de Administración</h2>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Nota Venta</th>
-                            <th>Fecha Solicitud</th>
-                            <th>Detalle</th>
-                            <th>Estado</th>
-                            <th>Observaciones</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-solicitudes-admin">
-                        <!-- Se llenará con JavaScript -->
-                    </tbody>
-                </table>
+            <!-- Panel de Admin -->
+            <div id="admin-panel" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="panel-title mb-0">
+                        <i class="fas fa-user-shield me-2"></i>Panel de Administración
+                    </h2>
+                    
+                    <div class="d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Filtrar
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item active" href="#">Todas</a></li>
+                                <li><a class="dropdown-item" href="#">Pendientes</a></li>
+                                <li><a class="dropdown-item" href="#">En Fabricación</a></li>
+                                <li><a class="dropdown-item" href="#">Entregadas</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <input type="text" class="form-control" placeholder="Buscar...">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nota Venta</th>
+                                    <th>Fecha</th>
+                                    <th>Detalle</th>
+                                    <th>Estado</th>
+                                    <th>Observaciones</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-solicitudes-admin">
+                                <!-- Se llenará con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer d-flex justify-content-between align-items-center p-2">
+                        <small class="text-muted">Mostrando todas las solicitudes</small>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Modales para detalles y ediciones -->
+    <!-- Modales -->
+    <!-- Modal de detalle de solicitud -->
     <div class="modal fade" id="detalle-modal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Detalle de Solicitud</h5>
+                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalle de Solicitud</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="detalle-modal-body">
@@ -177,11 +342,12 @@
         </div>
     </div>
 
+    <!-- Modal para actualizar estado -->
     <div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title">Actualizar Estado</h5>
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Actualizar Estado</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -197,9 +363,12 @@
                         </div>
                         <div class="mb-3">
                             <label for="observaciones" class="form-label">Observaciones</label>
-                            <textarea class="form-control" id="observaciones" rows="3"></textarea>
+                            <textarea class="form-control" id="observaciones" rows="3" placeholder="Ingrese observaciones sobre este cambio de estado"></textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        <div class="text-end">
+                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -212,7 +381,7 @@
         <span id="sync-message">Sincronizando datos...</span>
     </div>
 
-    <!-- Script de Bootstrap -->
+    <!-- Scripts de Bootstrap y otras dependencias -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
     <!-- Scripts de la aplicación -->
