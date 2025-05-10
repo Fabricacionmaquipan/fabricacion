@@ -19,11 +19,6 @@ body {
     box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
 }
 
-#github-login {
-    margin-top: 20px;
-    padding: 10px 20px;
-}
-
 /* Estilos para los paneles */
 #bodega-panel, #fabricacion-panel, #admin-panel {
     background-color: white;
@@ -67,23 +62,6 @@ body {
     border-bottom: none;
 }
 
-/* Estilos para botones */
-.btn-primary {
-    background-color: #0d6efd;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-}
-
-.btn-success {
-    background-color: #198754;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-}
-
 /* Estilos para historial de cambios */
 .history-item {
     border-left: 3px solid #0d6efd;
@@ -96,24 +74,34 @@ body {
     color: #6c757d;
 }
 
-/* Animaciones */
-.fade-in {
-    animation: fadeIn 0.5s;
+/* Estilos para sincronización */
+.sync-status {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: none;
+    z-index: 1000;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+.sync-status.active {
+    display: block;
 }
 
-/* Responsividad */
-@media (max-width: 768px) {
-    .card-body {
-        padding: 15px;
-    }
-    
-    .btn {
-        width: 100%;
-        margin-bottom: 5px;
-    }
+.loading-spinner {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 0.2em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border .75s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spinner-border {
+    to { transform: rotate(360deg); }
 }
