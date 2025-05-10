@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Solicitudes Bodega-Fabricación</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="github-storage.js"></script>
     <style>
         /* Estilos generales */
         body {
@@ -278,6 +279,7 @@
 
     <!-- Script de Bootstrap -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
     <!-- Script principal de la aplicación -->
     <script>
         // Datos de ejemplo para pruebas
@@ -360,7 +362,7 @@
 
         // Variables globales
         let currentRole = '';
-        let solicitudes = [...solicitudesData]; // Clonar los datos de ejemplo
+        let solicitudes = [];
 
         // Elementos DOM
         const loginScreen = document.getElementById('login-screen');
@@ -392,23 +394,8 @@
         const nuevoEstadoSelect = document.getElementById('nuevo-estado');
         const observacionesText = document.getElementById('observaciones');
 
-        // Inicializar la aplicación cuando se carga la página
-        document.addEventListener('DOMContentLoaded', init);
-
-        // Función de inicialización
-        function init() {
-            // Comprobar si hay un rol guardado en localStorage
-            const savedRole = localStorage.getItem('current_role');
-            if (savedRole) {
-                currentRole = savedRole;
-                showPanel(currentRole);
-            } else {
-                showLoginScreen();
-            }
-            
-            // Configurar event listeners
-            setupEventListeners();
-        }
+        // Las funciones init(), handleNuevaSolicitud() y handleActualizarEstado() 
+        // han sido reemplazadas por las versiones en github-storage.js
 
         // Configurar los escuchadores de eventos
         function setupEventListeners() {
@@ -628,78 +615,6 @@
                 tablaSolicitudesAdmin.appendChild(tr);
             });
         }
-        // Manejar el envío del formulario de nueva solicitud
-        function handleNuevaSolicitud(e) {
-            e.preventDefault();
-            
-            const notaVenta = document.getElementById('nota-venta').value;
-            const fechaSolicitud = document.getElementById('fecha-solicitud').value;
-            
-            // Obtener productos y cantidades
-            const productos = [];
-            const cantidades = [];
-            
-            const productosInputs = document.querySelectorAll('input[name="producto[]"]');
-            const cantidadesInputs = document.querySelectorAll('input[name="cantidad[]"]');
-            
-            for (let i = 0; i < productosInputs.length; i++) {
-                const producto = productosInputs[i].value.trim();
-                const cantidad = parseInt(cantidadesInputs[i].value);
-                
-                if (producto && !isNaN(cantidad) && cantidad > 0) {
-                    productos.push(producto);
-                    cantidades.push(cantidad);
-                }
-            }
-            
-            if (productos.length === 0) {
-                alert('Debe agregar al menos un producto.');
-                return;
-            }
-            
-            // Crear la nueva solicitud
-            const nuevaSolicitud = {
-                id: Date.now().toString(),
-                notaVenta: notaVenta,
-                fechaSolicitud: fechaSolicitud,
-                estado: 'Solicitud enviada por bodega',
-                observaciones: '',
-                items: [],
-                historial: [
-                    {
-                        fecha: new Date().toISOString(),
-                        estado: 'Solicitud enviada por bodega',
-                        observaciones: '',
-                        usuario: 'usuario_bodega'
-                    }
-                ]
-            };
-            
-            // Agregar los productos
-            for (let i = 0; i < productos.length; i++) {
-                nuevaSolicitud.items.push({
-                    producto: productos[i],
-                    cantidad: cantidades[i]
-                });
-            }
-            
-            // Agregar la solicitud a la lista
-            solicitudes.unshift(nuevaSolicitud);
-            
-            // Limpiar el formulario
-            nuevaSolicitudForm.reset();
-            
-            // Limpiar los items excepto el primero
-            const items = document.querySelectorAll('.item-row');
-            for (let i = 1; i < items.length; i++) {
-                items[i].remove();
-            }
-            
-            // Recargar los datos
-            cargarDatosBodega();
-            
-            alert('Solicitud creada correctamente.');
-        }
 
         // Agregar un nuevo item al formulario
         function addItem() {
@@ -827,44 +742,6 @@
                 modal.show();
             } else {
                 alert('No se encontró la solicitud.');
-            }
-        }
-
-        // Manejar la actualización de estado
-        function handleActualizarEstado(e) {
-            e.preventDefault();
-            
-            const solicitudId = solicitudIdInput.value;
-            const nuevoEstado = nuevoEstadoSelect.value;
-            const observaciones = observacionesText.value;
-            
-            const solicitud = solicitudes.find(s => s.id === solicitudId);
-            
-            if (solicitud) {
-                const estadoAnterior = solicitud.estado;
-                solicitud.estado = nuevoEstado;
-                solicitud.observaciones = observaciones;
-                
-                // Agregar al historial
-                solicitud.historial.push({
-                    fecha: new Date().toISOString(),
-                    estado: nuevoEstado,
-                    observaciones: observaciones,
-                    usuario: currentRole === 'admin' ? 'usuario_admin' : 'usuario_fabricacion'
-                });
-                
-                // Cerrar el modal
-                const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
-                modal.hide();
-                
-                // Recargar los datos
-                if (currentRole === 'fabricacion') {
-                    cargarDatosFabricacion();
-                } else if (currentRole === 'admin') {
-                    cargarDatosAdmin();
-                }
-                
-                alert('Estado actualizado correctamente.');
             }
         }
 
