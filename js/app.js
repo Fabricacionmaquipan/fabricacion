@@ -46,12 +46,8 @@ function init() {
         }, 5000);
     });
     
-    // Comprobar si hay un rol guardado en localStorage
-    const savedRole = localStorage.getItem('current_role');
-    if (savedRole) {
-        currentRole = savedRole;
-        showPanel(currentRole);
-    } else {
+    // Comprobar si hay una sesión activa
+    if (!checkExistingSession()) {
         showLoginScreen();
     }
     
@@ -70,6 +66,10 @@ function updateCurrentView() {
         cargarDatosFabricacion();
     } else if (currentRole === 'admin') {
         cargarDatosAdmin();
+        // También cargar usuarios si es admin
+        if (typeof window.userManagement !== 'undefined') {
+            window.userManagement.setupUsersListeners();
+        }
     }
 }
 
@@ -137,6 +137,204 @@ function setupEventListeners() {
             toggleDarkMode();
         }
     });
+    
+    // Manejar envío de solicitudes con el usuario actual
+    const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
+    if (nuevaSolicitudForm) {
+        // Sobrescribir el evento de envío de solicitud para incluir el usuario
+        nuevaSolicitudForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                mostrarAlerta('Debes iniciar sesión para enviar solicitudes', 'warning');
+                return;
+            }
+            
+            // Llamar al manejador original pero incluir el usuario actual
+            handleNuevaSolicitudConUsuario(e, currentUser);
+        }, true); // Usar true para capturar el evento antes que otros listeners
+    }
+}
+
+// Manejar el envío de solicitud incluyendo información del usuario
+function handleNuevaSolicitudConUsuario(e, user) {
+    // Obtener valores del formulario
+    const notaVenta = document.getElementById('nota-venta').value;
+    const fechaSolicitud = document.getElementById('fecha-solicitud').value;
+    
+    // Obtener productos y cantidades
+    const productos = [];
+    const cantidades = [];
+    
+    const productosInputs = document.querySelectorAll('input[name="producto[]"]');
+    const cantidadesInputs = document.querySelectorAll('input[name="cantidad[]"]');
+    
+    for (let i = 0; i < productosInputs.length; i++) {
+        const producto = productosInputs[i].value.trim();
+        const cantidad = parseInt(cantidadesInputs[i].value);
+        
+        if (producto && !isNaN(cantidad) && cantidad > 0) {
+            productos.push(producto);
+            cantidades.push(cantidad);
+        }
+    }
+    
+    if (productos.length === 0) {
+        mostrarAlerta('Debe agregar al menos un producto.', 'warning');
+        return;
+    }
+    
+    // Mostrar indicador de carga
+    mostrarSincronizacion('Creando solicitud...');
+    
+    // Crear la nueva solicitud
+    const nuevaSolicitud = {
+        id: Date.now().toString(),
+        notaVenta: notaVenta,
+        fechaSolicitud: fechaSolicitud,
+        estado: 'Solicitud enviada por bodega',
+        observaciones: '',
+        items: [],
+        creadoPor: {
+            userId: user.id,
+            username: user.username,
+            displayName: user.displayName
+        },
+        historial: [
+            {
+                fecha: new Date().toISOString(),
+                estado: 'Solicitud enviada por bodega',
+                observaciones: '',
+                usuario: user.displayName,
+                userId: user.id
+            }
+        ]
+    };
+    
+    // Agregar los productos
+    for (let i = 0; i < productos.length; i++) {
+        nuevaSolicitud.items.push({
+            producto: productos[i],
+            cantidad: cantidades[i]
+        });
+    }
+    
+    try {
+        // Guardar en Firebase
+        solicitudesRef.child(nuevaSolicitud.id).set(nuevaSolicitud)
+            .then(() => {
+                // Limpiar el formulario
+                document.getElementById('nueva-solicitud-form').reset();
+                
+                // Limpiar los items excepto el primero
+                const items = document.querySelectorAll('.item-row');
+                for (let i = 1; i < items.length; i++) {
+                    items[i].remove();
+                }
+                
+                // Restablecer el primer item
+                const firstProductInput = document.querySelector('input[name="producto[]"]');
+                const firstCantidadInput = document.querySelector('input[name="cantidad[]"]');
+                if (firstProductInput) firstProductInput.value = '';
+                if (firstCantidadInput) firstCantidadInput.value = '';
+                
+                mostrarAlerta('Solicitud creada correctamente.', 'success');
+                ocultarSincronizacion();
+                
+                // Cerrar el formulario en móviles
+                if (window.innerWidth < 768) {
+                    const nuevaSolicitudContainer = document.getElementById('nueva-solicitud-container');
+                    const bsCollapse = bootstrap.Collapse.getInstance(nuevaSolicitudContainer);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al guardar la solicitud:', error);
+                mostrarAlerta('Error al crear la solicitud. Por favor, inténtalo de nuevo.', 'danger');
+                ocultarSincronizacion();
+            });
+    } catch (error) {
+        console.error('Error al guardar la solicitud:', error);
+        mostrarAlerta('Error al crear la solicitud. Por favor, inténtalo de nuevo.', 'danger');
+        ocultarSincronizacion();
+    }
+}
+
+// Manejar la actualización de estado incluyendo información del usuario actual
+function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user) {
+    const solicitud = solicitudes.find(s => s.id === solicitudId);
+    
+    if (solicitud) {
+        try {
+            mostrarSincronizacion('Actualizando estado...');
+            
+            // Crear una copia de la solicitud para actualizar
+            const solicitudActualizada = {...solicitud};
+            
+            // Actualizar estado y observaciones
+            solicitudActualizada.estado = nuevoEstado;
+            solicitudActualizada.observaciones = observaciones;
+            
+            // Agregar al historial con información del usuario
+            solicitudActualizada.historial.push({
+                fecha: new Date().toISOString(),
+                estado: nuevoEstado,
+                observaciones: observaciones,
+                usuario: user.displayName,
+                userId: user.id
+            });
+            
+            // Guardar en Firebase
+            solicitudesRef.child(solicitudId).update(solicitudActualizada)
+                .then(() => {
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('actualizar-estado-modal'));
+                    if (modal) modal.hide();
+                    
+                    mostrarAlerta('Estado actualizado correctamente.', 'success');
+                    ocultarSincronizacion();
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el estado:', error);
+                    mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
+                    ocultarSincronizacion();
+                });
+        } catch (error) {
+            console.error('Error al actualizar el estado:', error);
+            mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
+            ocultarSincronizacion();
+        }
+    } else {
+        mostrarAlerta('No se encontró la solicitud.', 'danger');
+        ocultarSincronizacion();
+    }
+}
+
+// Sobrescribir el manejador de actualización de estado para incluir al usuario
+function overrideUpdateHandlers() {
+    // Referencia al formulario de actualización de estado
+    const actualizarEstadoForm = document.getElementById('actualizar-estado-form');
+    
+    if (actualizarEstadoForm) {
+        // Sobrescribir el evento submit
+        actualizarEstadoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                mostrarAlerta('Debes iniciar sesión para actualizar estados', 'warning');
+                return;
+            }
+            
+            const solicitudId = document.getElementById('solicitud-id').value;
+            const nuevoEstado = document.getElementById('nuevo-estado').value;
+            const observaciones = document.getElementById('observaciones').value;
+            
+            // Llamar a la función con el usuario actual
+            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
+        }, true); // Usar true para capturar el evento antes que otros listeners
+    }
 }
 
 // Alternar entre tema claro y oscuro (para implementación futura)
@@ -161,3 +359,14 @@ function applyStoredTheme() {
         document.body.classList.add('dark-mode');
     }
 }
+
+// Inicializar el sistema de autenticación y sobreescribir handlers
+function initAuthSystem() {
+    // Sobrescribir los manejadores para incluir información de usuario
+    overrideUpdateHandlers();
+    
+    // Otras inicializaciones relacionadas con autenticación
+}
+
+// Llamar a la inicialización del sistema de autenticación después del DOMContentLoaded
+window.addEventListener('DOMContentLoaded', initAuthSystem);
