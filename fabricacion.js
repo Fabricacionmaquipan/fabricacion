@@ -1,37 +1,40 @@
-// Elementos DOM
+// Elementos DOM - Comprobamos si ya están definidos globalmente
 const tablaSolicitudesFabricacion = document.getElementById('tabla-solicitudes-fabricacion');
-const actualizarEstadoModal = document.getElementById('actualizar-estado-modal');
-const actualizarEstadoForm = document.getElementById('actualizar-estado-form');
-const solicitudIdInput = document.getElementById('solicitud-id');
-const nuevoEstadoSelect = document.getElementById('nuevo-estado');
-const observacionesText = document.getElementById('observaciones');
-const detalleModal = document.getElementById('detalle-modal');
-const detalleModalBody = document.getElementById('detalle-modal-body');
+// Usamos variables globales si ya existen, o las definimos si no
+const detalleModalFabricacion = document.getElementById('detalle-modal');
+const detalleModalBodyFabricacion = document.getElementById('detalle-modal-body');
+const actualizarEstadoModalFabricacion = document.getElementById('actualizar-estado-modal');
+const actualizarEstadoFormFabricacion = document.getElementById('actualizar-estado-form');
+const solicitudIdInputFabricacion = document.getElementById('solicitud-id');
+const nuevoEstadoSelectFabricacion = document.getElementById('nuevo-estado');
+const observacionesTextFabricacion = document.getElementById('observaciones');
 
 // Inicializar las funciones de fabricación
 function initFabricacion() {
-    setupEventListeners();
+    setupEventListenersFabricacion();
 }
 
 // Configurar event listeners
-function setupEventListeners() {
-    if (actualizarEstadoForm) {
-        actualizarEstadoForm.addEventListener('submit', handleActualizarEstado);
+function setupEventListenersFabricacion() {
+    if (actualizarEstadoFormFabricacion) {
+        actualizarEstadoFormFabricacion.addEventListener('submit', handleActualizarEstadoFabricacion);
     }
     
     // Listener para botones de cambio de estado
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-cambiar-estado')) {
+        if (e.target && e.target.classList.contains('btn-cambiar-estado') && 
+            e.target.closest('#fabricacion-panel')) {
             const solicitudId = e.target.getAttribute('data-id');
-            showActualizarEstadoModal(solicitudId);
+            showActualizarEstadoModalFabricacion(solicitudId);
         }
     });
     
     // Listener para botones de detalle
     document.addEventListener('click', function(e) {
-        if (e.target && e.target.classList.contains('btn-detalle')) {
+        if (e.target && e.target.classList.contains('btn-detalle') && 
+            e.target.closest('#fabricacion-panel')) {
             const solicitudId = e.target.getAttribute('data-id');
-            showDetalle(solicitudId);
+            showDetalleFabricacion(solicitudId);
         }
     });
 }
@@ -40,7 +43,7 @@ function setupEventListeners() {
 async function loadFabricacionData() {
     try {
         const solicitudes = await window.db.loadSolicitudes();
-        renderTablaSolicitudes(solicitudes);
+        renderTablaSolicitudesFabricacion(solicitudes);
     } catch (error) {
         console.error('Error al cargar datos de fabricación:', error);
         alert('Error al cargar los datos. Por favor, inténtalo de nuevo.');
@@ -48,7 +51,7 @@ async function loadFabricacionData() {
 }
 
 // Renderizar la tabla de solicitudes
-function renderTablaSolicitudes(solicitudes) {
+function renderTablaSolicitudesFabricacion(solicitudes) {
     if (!tablaSolicitudesFabricacion) return;
     
     tablaSolicitudesFabricacion.innerHTML = '';
@@ -92,26 +95,26 @@ function renderTablaSolicitudes(solicitudes) {
 }
 
 // Mostrar el modal para actualizar estado
-async function showActualizarEstadoModal(solicitudId) {
+async function showActualizarEstadoModalFabricacion(solicitudId) {
     try {
         const solicitudes = await window.db.loadSolicitudes();
         const solicitud = solicitudes.find(s => s.id === solicitudId);
         
         if (solicitud) {
-            solicitudIdInput.value = solicitudId;
+            solicitudIdInputFabricacion.value = solicitudId;
             
             // Establecer el estado actual
-            for (let i = 0; i < nuevoEstadoSelect.options.length; i++) {
-                if (nuevoEstadoSelect.options[i].value === solicitud.estado) {
-                    nuevoEstadoSelect.selectedIndex = i;
+            for (let i = 0; i < nuevoEstadoSelectFabricacion.options.length; i++) {
+                if (nuevoEstadoSelectFabricacion.options[i].value === solicitud.estado) {
+                    nuevoEstadoSelectFabricacion.selectedIndex = i;
                     break;
                 }
             }
             
-            observacionesText.value = solicitud.observaciones || '';
+            observacionesTextFabricacion.value = solicitud.observaciones || '';
             
             // Mostrar el modal
-            const modal = new bootstrap.Modal(actualizarEstadoModal);
+            const modal = new bootstrap.Modal(actualizarEstadoModalFabricacion);
             modal.show();
         } else {
             alert('No se encontró la solicitud.');
@@ -123,13 +126,13 @@ async function showActualizarEstadoModal(solicitudId) {
 }
 
 // Manejar la actualización de estado
-async function handleActualizarEstado(e) {
+async function handleActualizarEstadoFabricacion(e) {
     e.preventDefault();
     
     try {
-        const solicitudId = solicitudIdInput.value;
-        const nuevoEstado = nuevoEstadoSelect.value;
-        const observaciones = observacionesText.value;
+        const solicitudId = solicitudIdInputFabricacion.value;
+        const nuevoEstado = nuevoEstadoSelectFabricacion.value;
+        const observaciones = observacionesTextFabricacion.value;
         
         // Actualizar el estado
         const actualizado = await window.db.actualizarEstadoSolicitud(solicitudId, nuevoEstado, observaciones);
@@ -138,7 +141,7 @@ async function handleActualizarEstado(e) {
             alert('Estado actualizado correctamente.');
             
             // Cerrar el modal
-            const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
+            const modal = bootstrap.Modal.getInstance(actualizarEstadoModalFabricacion);
             modal.hide();
             
             // Recargar los datos
@@ -153,14 +156,14 @@ async function handleActualizarEstado(e) {
 }
 
 // Mostrar detalle de una solicitud
-async function showDetalle(solicitudId) {
+async function showDetalleFabricacion(solicitudId) {
     try {
         const solicitudes = await window.db.loadSolicitudes();
         const solicitud = solicitudes.find(s => s.id === solicitudId);
         
         if (solicitud) {
             // Llenar el modal con los detalles
-            detalleModalBody.innerHTML = `
+            detalleModalBodyFabricacion.innerHTML = `
                 <div class="row mb-3">
                     <div class="col-md-6">
                         <strong>ID:</strong> ${solicitud.id}
@@ -217,7 +220,7 @@ async function showDetalle(solicitudId) {
             `;
             
             // Mostrar el modal
-            const modal = new bootstrap.Modal(detalleModal);
+            const modal = new bootstrap.Modal(detalleModalFabricacion);
             modal.show();
         } else {
             alert('No se encontró la solicitud.');
