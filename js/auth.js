@@ -16,9 +16,9 @@ const userRoleDisplay = document.getElementById('user-role-display');
 
 // Base de datos de usuarios (en producción esto estaría en Firebase)
 const usuarios = [
-    { username: 'bodega1', password: 'Bodega2025', role: 'bodega', displayName: 'Usuario Bodega' },
-    { username: 'fabricacion1', password: 'Pelaoyjoel', role: 'fabricacion', displayName: 'Usuario Fabricación' },
-    { username: 'admin1', password: 'Mono1700..', role: 'admin', displayName: 'Administrador' },
+    { username: 'bodega', password: 'Bodega2025', role: 'bodega', displayName: 'Usuario Bodega' },
+    { username: 'fabricacion', password: 'Pelaoyjoel', role: 'fabricacion', displayName: 'Usuario Fabricación' },
+    { username: 'admin', password: 'Mono1700..', role: 'admin', displayName: 'Administrador' },
     // Puedes agregar más usuarios según sea necesario
 ];
 
