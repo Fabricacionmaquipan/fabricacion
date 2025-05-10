@@ -19,14 +19,16 @@ function setupModalsListeners() {
     // Delegación de eventos para botones de modales
     document.addEventListener('click', (e) => {
         // Evento para mostrar detalle
-        if (e.target.classList.contains('btn-detalle')) {
-            const solicitudId = e.target.getAttribute('data-id');
+        if (e.target.classList.contains('btn-detalle') || e.target.closest('.btn-detalle')) {
+            const button = e.target.classList.contains('btn-detalle') ? e.target : e.target.closest('.btn-detalle');
+            const solicitudId = button.getAttribute('data-id');
             showDetalleSolicitud(solicitudId);
         }
         
         // Evento para cambiar estado
-        if (e.target.classList.contains('btn-cambiar-estado')) {
-            const solicitudId = e.target.getAttribute('data-id');
+        if (e.target.classList.contains('btn-cambiar-estado') || e.target.closest('.btn-cambiar-estado')) {
+            const button = e.target.classList.contains('btn-cambiar-estado') ? e.target : e.target.closest('.btn-cambiar-estado');
+            const solicitudId = button.getAttribute('data-id');
             showActualizarEstadoModal(solicitudId);
         }
     });
@@ -39,66 +41,145 @@ function showDetalleSolicitud(solicitudId) {
     if (solicitud) {
         // Llenar el modal con los detalles
         detalleModalBody.innerHTML = `
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>ID:</strong> ${solicitud.id}
-                </div>
-                <div class="col-md-6">
-                    <strong>Nota de Venta:</strong> ${solicitud.notaVenta}
+            <div class="card status-card mb-3 ${getStatusCardClass(solicitud.estado)}">
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">ID:</span>
+                                <span class="detail-value">${solicitud.id}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Nota de Venta:</span>
+                                <span class="detail-value">${solicitud.notaVenta}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Fecha de Solicitud:</span>
+                                <span class="detail-value">${formatDate(solicitud.fechaSolicitud)}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Estado:</span>
+                                <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <strong>Fecha de Solicitud:</strong> ${formatDate(solicitud.fechaSolicitud)}
+            
+            <div class="detail-section mb-3">
+                <div class="detail-section-header mb-2">
+                    <h6 class="mb-0"><i class="fas fa-comment-alt me-2"></i>Observaciones</h6>
                 </div>
-                <div class="col-md-6">
-                    <strong>Estado:</strong> 
-                    <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
-                </div>
-            </div>
-            <div class="row mb-3">
-                <div class="col-12">
-                    <strong>Observaciones:</strong> 
+                <div class="detail-section-content">
                     <p>${solicitud.observaciones || 'Sin observaciones'}</p>
                 </div>
             </div>
             
-            <h5 class="mt-4">Productos Solicitados</h5>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${solicitud.items.map(item => `
-                        <tr>
-                            <td>${item.producto}</td>
-                            <td>${item.cantidad}</td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-            
-            <h5 class="mt-4">Historial de Cambios</h5>
-            <div class="history-container">
-                ${solicitud.historial.map(hist => `
-                    <div class="history-item">
-                        <div class="history-date">${formatDateTime(hist.fecha)}</div>
-                        <div><strong>Estado:</strong> ${hist.estado}</div>
-                        ${hist.observaciones ? `<div><strong>Observaciones:</strong> ${hist.observaciones}</div>` : ''}
-                        <div><strong>Usuario:</strong> ${hist.usuario}</div>
+            <div class="detail-section mb-3">
+                <div class="detail-section-header mb-2">
+                    <h6 class="mb-0"><i class="fas fa-boxes me-2"></i>Productos Solicitados</h6>
+                </div>
+                <div class="detail-section-content">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th style="width: 30%">Cantidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${solicitud.items.map(item => `
+                                    <tr>
+                                        <td>${item.producto}</td>
+                                        <td>${item.cantidad}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
                     </div>
-                `).join('')}
+                </div>
+            </div>
+            
+            <div class="detail-section">
+                <div class="detail-section-header mb-2">
+                    <h6 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Cambios</h6>
+                </div>
+                <div class="detail-section-content">
+                    <div class="history-container">
+                        ${solicitud.historial.map(hist => `
+                            <div class="history-item">
+                                <div class="history-date">${formatDateTime(hist.fecha)}</div>
+                                <div class="history-content">
+                                    <div><strong>Estado:</strong> 
+                                        <span class="badge ${getStatusBadgeClass(hist.estado)}">${hist.estado}</span>
+                                    </div>
+                                    ${hist.observaciones ? `<div><strong>Observaciones:</strong> ${hist.observaciones}</div>` : ''}
+                                    <div><strong>Usuario:</strong> <span class="text-primary">${hist.usuario}</span></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
             </div>
         `;
+        
+        // Aplicar estilos CSS adicionales
+        const style = document.createElement('style');
+        style.textContent = `
+            .detail-item {
+                margin-bottom: 0.5rem;
+            }
+            .detail-label {
+                font-weight: 500;
+                color: #495057;
+                display: block;
+                font-size: 0.8rem;
+            }
+            .detail-value {
+                font-size: 1rem;
+            }
+            .detail-section {
+                border: 1px solid #dee2e6;
+                border-radius: 0.375rem;
+                overflow: hidden;
+            }
+            .detail-section-header {
+                padding: 0.75rem;
+                background-color: #f8f9fa;
+                border-bottom: 1px solid #dee2e6;
+            }
+            .detail-section-content {
+                padding: 0.75rem;
+            }
+        `;
+        detalleModalBody.appendChild(style);
         
         // Mostrar el modal
         const modal = new bootstrap.Modal(detalleModal);
         modal.show();
     } else {
-        alert('No se encontró la solicitud.');
+        mostrarAlerta('No se encontró la solicitud.', 'danger');
+    }
+}
+
+// Obtener clase para tarjeta según estado
+function getStatusCardClass(estado) {
+    switch (estado) {
+        case 'Solicitud enviada por bodega':
+            return 'pending';
+        case 'En fabricación':
+            return 'processing';
+        case 'Entregado':
+            return 'completed';
+        default:
+            return '';
     }
 }
 
@@ -117,13 +198,25 @@ function showActualizarEstadoModal(solicitudId) {
             }
         }
         
+        // Establecer observaciones
         observacionesText.value = solicitud.observaciones || '';
+        
+        // Preparar el modal con info adicional
+        const modalTitle = actualizarEstadoModal.querySelector('.modal-title');
+        if (modalTitle) {
+            modalTitle.innerHTML = `<i class="fas fa-edit me-2"></i>Actualizar Estado <small class="text-muted">(Nota: ${solicitud.notaVenta})</small>`;
+        }
         
         // Mostrar el modal
         const modal = new bootstrap.Modal(actualizarEstadoModal);
         modal.show();
+        
+        // Focus en el selector de estado
+        setTimeout(() => {
+            nuevoEstadoSelect.focus();
+        }, 500);
     } else {
-        alert('No se encontró la solicitud.');
+        mostrarAlerta('No se encontró la solicitud.', 'danger');
     }
 }
 
@@ -163,15 +256,41 @@ async function handleActualizarEstado(e) {
             const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
             modal.hide();
             
-            alert('Estado actualizado correctamente.');
+            mostrarAlerta('Estado actualizado correctamente.', 'success');
             ocultarSincronizacion();
         } catch (error) {
             console.error('Error al actualizar el estado:', error);
-            alert('Error al actualizar el estado. Por favor, inténtalo de nuevo.');
+            mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
             ocultarSincronizacion();
         }
     } else {
-        alert('No se encontró la solicitud.');
+        mostrarAlerta('No se encontró la solicitud.', 'danger');
         ocultarSincronizacion();
     }
+}
+
+// Función para mostrar alertas
+function mostrarAlerta(mensaje, tipo = 'info') {
+    // Crear elemento de alerta
+    const alertContainer = document.createElement('div');
+    alertContainer.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertContainer.style.top = '15px';
+    alertContainer.style.right = '15px';
+    alertContainer.style.zIndex = '9999';
+    alertContainer.style.maxWidth = '300px';
+    alertContainer.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 0, 0, 0.15)';
+    
+    alertContainer.innerHTML = `
+        ${mensaje}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Añadir al body
+    document.body.appendChild(alertContainer);
+    
+    // Auto-cerrar después de 3 segundos
+    setTimeout(() => {
+        const alert = bootstrap.Alert.getOrCreateInstance(alertContainer);
+        alert.close();
+    }, 3000);
 }
