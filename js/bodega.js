@@ -6,10 +6,31 @@ const itemsContainer = document.getElementById('items-container');
 const addItemBtn = document.getElementById('add-item');
 const tablaSolicitudesBodega = document.getElementById('tabla-solicitudes-bodega');
 
+// Función para establecer la fecha actual en el formulario
+function setFechaActual() {
+    const fechaInput = document.getElementById('fecha-solicitud');
+    if (fechaInput) {
+        // Obtener fecha actual en formato YYYY-MM-DD
+        const hoy = new Date();
+        const año = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, '0'); // +1 porque los meses van de 0 a 11
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        
+        const fechaFormateada = `${año}-${mes}-${dia}`;
+        
+        // Establecer el valor y hacer el campo de solo lectura
+        fechaInput.value = fechaFormateada;
+        fechaInput.setAttribute('readonly', 'readonly');
+    }
+}
+
 // Configurar event listeners específicos de bodega
 function setupBodegaListeners() {
     if (nuevaSolicitudForm) {
         nuevaSolicitudForm.addEventListener('submit', handleNuevaSolicitud);
+        
+        // Establecer fecha actual cada vez que se muestra el formulario
+        setFechaActual();
     }
     
     if (addItemBtn) {
@@ -31,6 +52,12 @@ function setupBodegaListeners() {
             const searchTerm = e.target.value.toLowerCase();
             filtrarSolicitudesBodega(searchTerm);
         });
+    }
+    
+    // Cuando se hace clic en el botón de "Nueva Solicitud", establecer la fecha actual
+    const btnNuevaSolicitud = document.querySelector('[data-bs-target="#nueva-solicitud-container"]');
+    if (btnNuevaSolicitud) {
+        btnNuevaSolicitud.addEventListener('click', setFechaActual);
     }
 }
 
@@ -116,6 +143,9 @@ function cargarDatosBodega() {
 async function handleNuevaSolicitud(e) {
     e.preventDefault();
     
+    // Comprobación adicional para asegurar que estamos usando la fecha actual
+    setFechaActual();
+    
     mostrarSincronizacion('Enviando solicitud...');
     
     const notaVenta = document.getElementById('nota-venta').value;
@@ -189,6 +219,9 @@ async function handleNuevaSolicitud(e) {
         if (firstProductInput) firstProductInput.value = '';
         if (firstCantidadInput) firstCantidadInput.value = '';
         
+        // Restablecer la fecha actual para la próxima solicitud
+        setFechaActual();
+        
         mostrarAlerta('Solicitud creada correctamente.', 'success');
         ocultarSincronizacion();
         
@@ -241,23 +274,6 @@ function addItem() {
         if (input) input.focus();
     }, 100);
 }
-// Función para establecer la fecha actual en el formulario
-function setFechaActual() {
-    const fechaInput = document.getElementById('fecha-solicitud');
-    if (fechaInput) {
-        // Obtener fecha actual en formato YYYY-MM-DD
-        const hoy = new Date();
-        const año = hoy.getFullYear();
-        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dia = String(hoy.getDate()).padStart(2, '0');
-        
-        const fechaFormateada = `${año}-${mes}-${dia}`;
-        
-        // Establecer el valor y hacer el campo de solo lectura
-        fechaInput.value = fechaFormateada;
-        fechaInput.setAttribute('readonly', 'readonly');
-    }
-}
 
 // Eliminar un item del formulario
 function removeItem(button) {
@@ -279,28 +295,11 @@ function removeItem(button) {
     }
 }
 
-// Función para mostrar alertas
-function mostrarAlerta(mensaje, tipo = 'info') {
-    // Crear elemento de alerta
-    const alertContainer = document.createElement('div');
-    alertContainer.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-    alertContainer.style.top = '15px';
-    alertContainer.style.right = '15px';
-    alertContainer.style.zIndex = '9999';
-    alertContainer.style.maxWidth = '300px';
-    alertContainer.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 0, 0, 0.15)';
-    
-    alertContainer.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    // Añadir al body
-    document.body.appendChild(alertContainer);
-    
-    // Auto-cerrar después de 3 segundos
-    setTimeout(() => {
-        const alert = bootstrap.Alert.getOrCreateInstance(alertContainer);
-        alert.close();
-    }, 3000);
-}
+// Asegurarse de que la fecha se establezca cuando se carga la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Si el panel de bodega está visible al cargar la página, establecer la fecha
+    const bodegaPanel = document.getElementById('bodega-panel');
+    if (bodegaPanel && window.getComputedStyle(bodegaPanel).display !== 'none') {
+        setFechaActual();
+    }
+});
