@@ -160,7 +160,19 @@ function setupEventListeners() {
 function handleNuevaSolicitudConUsuario(e, user) {
     // Obtener valores del formulario
     const notaVenta = document.getElementById('nota-venta').value;
-    const fechaSolicitud = document.getElementById('fecha-solicitud').value;
+    
+    // Usar siempre la fecha actual para las nuevas solicitudes
+    const fechaActual = new Date();
+    const año = fechaActual.getFullYear();
+    const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+    const dia = String(fechaActual.getDate()).padStart(2, '0');
+    const fechaSolicitud = `${año}-${mes}-${dia}`;
+    
+    // Actualizar el campo de fecha en el formulario (por si acaso)
+    const fechaInput = document.getElementById('fecha-solicitud');
+    if (fechaInput) {
+        fechaInput.value = fechaSolicitud;
+    }
     
     // Obtener productos y cantidades
     const productos = [];
@@ -237,6 +249,9 @@ function handleNuevaSolicitudConUsuario(e, user) {
                 const firstCantidadInput = document.querySelector('input[name="cantidad[]"]');
                 if (firstProductInput) firstProductInput.value = '';
                 if (firstCantidadInput) firstCantidadInput.value = '';
+                
+                // Restablecer la fecha actual
+                setFechaActual();
                 
                 mostrarAlerta('Solicitud creada correctamente.', 'success');
                 ocultarSincronizacion();
