@@ -1,111 +1,70 @@
 # Sistema de Solicitudes Bodega-Fabricación
 
-Este sistema permite gestionar solicitudes desde bodega a fabricación, con seguimiento de estado y acceso según roles de usuario.
+Este es un sistema web para gestionar solicitudes entre los departamentos de bodega y fabricación. La aplicación permite a los usuarios crear solicitudes, actualizar su estado y visualizar el historial de cambios.
 
-## Características Principales
+## Estructura del Proyecto
 
-- **Tres roles de usuario**: Bodega, Fabricación y Administrador
-- **Formulario de solicitud**: Bodega puede enviar solicitudes con nota de venta, fecha y detalle de productos
-- **Panel de fabricación**: Para actualizar estados y agregar observaciones
-- **Panel de administrador**: Con acceso completo para modificar cualquier campo
-- **Historial de cambios**: Registro de todas las modificaciones con fechas
-- **Almacenamiento en GitHub**: Los datos se guardan en archivos JSON en un repositorio de GitHub
+El proyecto ha sido reorganizado siguiendo un patrón modular para facilitar su mantenimiento:
 
-## Tecnologías Utilizadas
+```
+proyecto-solicitudes/
+├── index.html              // Archivo HTML principal
+├── css/
+│   └── styles.css          // Estilos CSS separados del HTML
+├── js/
+│   ├── config.js           // Configuración de Firebase
+│   ├── app.js              // Lógica principal de la aplicación
+│   ├── auth.js             // Gestión de autenticación y roles
+│   ├── bodega.js           // Funciones específicas del panel de bodega
+│   ├── fabricacion.js      // Funciones específicas del panel de fabricación
+│   ├── admin.js            // Funciones específicas del panel de administración
+│   ├── utils.js            // Funciones de utilidad (formateo de fechas, etc.)
+│   └── components/
+│       ├── modals.js       // Gestión de modales
+│       └── ui.js           // Funciones comunes de UI
+```
 
-- HTML5, CSS3 y JavaScript
-- Bootstrap 5 para el diseño responsivo
-- GitHub Pages para el hosting
-- GitHub API para el almacenamiento de datos
+## Implementación
 
-## Estructura de Archivos
+Para implementar esta nueva estructura, sigue estos pasos:
 
-- **index.html**: Página principal con la estructura del sistema
-- **styles.css**: Estilos CSS para la interfaz de usuario
-- **auth.js**: Manejo de autenticación con GitHub
-- **database.js**: Manejo de datos con GitHub API
-- **bodega.js**: Funcionalidad para el rol de bodega
-- **fabricacion.js**: Funcionalidad para el rol de fabricación
-- **admin.js**: Funcionalidad para el rol de administrador
+1. Crea las carpetas necesarias:
+   - `/css`
+   - `/js`
+   - `/js/components`
 
-## Instalación y Configuración
+2. Copia cada archivo a su ubicación correspondiente.
 
-1. **Crear un repositorio en GitHub**:
-   - Crear un nuevo repositorio llamado "sistema-solicitudes-datos"
-   - Habilitar GitHub Pages en la rama principal
+3. Asegúrate de que el archivo `index.html` cargue todos los scripts JavaScript en el orden correcto:
+   - Primero, las bibliotecas externas (Firebase, Bootstrap)
+   - Después, los scripts internos en el siguiente orden:
+     - `config.js`
+     - `utils.js`
+     - `auth.js`
+     - `bodega.js`
+     - `fabricacion.js`
+     - `admin.js`
+     - `components/modals.js`
+     - `components/ui.js`
+     - `app.js` (este debe ser el último ya que depende de todos los demás)
 
-2. **Configurar OAuth en GitHub**:
-   - Registrar una nueva aplicación OAuth en GitHub Developer Settings
-   - Obtener el Client ID y el Client Secret
-   - Configurar la URL de redirección a la URL de tu GitHub Pages
+## Ventajas de esta estructura
 
-3. **Configurar el sistema**:
-   - Reemplazar `YOUR_GITHUB_CLIENT_ID` en auth.js con tu Client ID
-   - Reemplazar `YOUR_GITHUB_USERNAME` en database.js con tu usuario de GitHub
+1. **Mejor organización**: Separar el código por funcionalidad facilita encontrar y mantener cada parte.
 
-4. **Subir archivos**:
-   - Subir todos los archivos al repositorio creado
-   - Crear un archivo `solicitudes.json` inicial con un array vacío `[]`
-   - Crear un archivo `historico.json` inicial con un array vacío `[]`
+2. **Modularidad**: Cada archivo tiene una responsabilidad específica, lo que mejora la legibilidad.
 
-## Uso del Sistema
+3. **Escalabilidad**: Es más fácil agregar nuevas funcionalidades sin afectar el código existente.
 
-### Rol de Bodega
+4. **Mantenimiento**: Cuando se necesite realizar cambios, solo habrá que modificar los archivos relevantes.
 
-1. **Crear una nueva solicitud**:
-   - Ingresar nota de venta y fecha
-   - Agregar productos y cantidades
-   - Enviar la solicitud
+5. **Colaboración**: Diferentes desarrolladores pueden trabajar en diferentes módulos sin conflictos.
 
-2. **Ver historial de solicitudes**:
-   - Consultar el estado actual de las solicitudes enviadas
-   - Ver el detalle de cada solicitud
+## Consideraciones futuras
 
-### Rol de Fabricación
+A medida que el sistema crezca, se pueden implementar mejoras adicionales:
 
-1. **Actualizar estado de solicitudes**:
-   - Cambiar el estado a "En fabricación" o "Entregado"
-   - Agregar observaciones cuando sea necesario
-
-2. **Ver detalles**:
-   - Consultar la información completa de cada solicitud
-   - Ver el historial de cambios de estado
-
-### Rol de Administrador
-
-1. **Gestión completa**:
-   - Acceso a todas las solicitudes
-   - Capacidad para editar cualquier campo
-   - Monitoreo del historial de cambios
-
-## Flujo de Trabajo
-
-1. **Bodega** crea una solicitud con estado inicial "Solicitud enviada por bodega"
-2. **Fabricación** actualiza el estado a "En fabricación" cuando comienza a trabajar en la solicitud
-3. **Fabricación** puede agregar observaciones si hay pendientes por materiales u otros motivos
-4. **Fabricación** actualiza el estado a "Entregado" cuando completa la solicitud
-5. **Administrador** puede intervenir en cualquier momento para corregir información si es necesario
-
-## Personalización y Mejoras Posibles
-
-1. **Autenticación real con GitHub**:
-   - Implementar el flujo completo de OAuth con GitHub
-   - Asociar roles a usuarios reales en una base de datos
-
-2. **Almacenamiento real en GitHub**:
-   - Implementar las funciones para leer y escribir archivos en GitHub
-   - Usar el API de GitHub para gestionar los datos
-
-3. **Funcionalidades adicionales**:
-   - Búsqueda y filtrado de solicitudes
-   - Exportación de datos a CSV o PDF
-   - Notificaciones por correo electrónico
-   - Subida de archivos adjuntos a las solicitudes
-
-## Soporte
-
-Para problemas o mejoras, crear un Issue en el repositorio de GitHub.
-
----
-
-Esta aplicación es un ejemplo y no debe usarse en producción sin implementar adecuadamente la autenticación y el almacenamiento real de datos.
+- Implementar un sistema de módulos ES6 (import/export)
+- Añadir un bundler como Webpack o Parcel
+- Implementar un framework como React o Vue para los componentes de UI
+- Agregar pruebas unitarias y de integración
