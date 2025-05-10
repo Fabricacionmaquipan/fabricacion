@@ -11,7 +11,7 @@ const observacionesText = document.getElementById('observaciones');
 
 // Configurar event listeners para modales
 function setupModalsListeners() {
-    // Evento para actualizar estado
+    // Evento para actualizar estado - este será sobreescrito en app.js
     if (actualizarEstadoForm) {
         actualizarEstadoForm.addEventListener('submit', handleActualizarEstado);
     }
@@ -27,11 +27,42 @@ function setupModalsListeners() {
         
         // Evento para cambiar estado
         if (e.target.classList.contains('btn-cambiar-estado') || e.target.closest('.btn-cambiar-estado')) {
+            // Verificar permisos
+            if (!hasPermission('cambiar_estado')) {
+                mostrarAlerta('No tienes permisos para cambiar el estado de las solicitudes', 'warning');
+                return;
+            }
+            
             const button = e.target.classList.contains('btn-cambiar-estado') ? e.target : e.target.closest('.btn-cambiar-estado');
             const solicitudId = button.getAttribute('data-id');
             showActualizarEstadoModal(solicitudId);
         }
     });
+}
+
+// Verificar permisos del usuario actual
+function hasPermission(action) {
+    // Si no hay sistema de autenticación implementado, permitir todo
+    if (typeof getCurrentUser !== 'function') return true;
+    
+    // Si hay función de verificación de permisos, usarla
+    if (typeof window.hasPermission === 'function') {
+        return window.hasPermission(action);
+    }
+    
+    // Verificación básica basada en roles
+    const user = getCurrentUser();
+    if (!user) return false;
+    
+    // Permisos por rol
+    const permisos = {
+        'bodega': ['crear_solicitud', 'ver_solicitudes_bodega'],
+        'fabricacion': ['ver_solicitudes', 'cambiar_estado'],
+        'admin': ['ver_solicitudes', 'cambiar_estado', 'eliminar_solicitud', 'exportar_datos', 'ver_estadisticas']
+    };
+    
+    const permisosUsuario = permisos[user.role] || [];
+    return permisosUsuario.includes(action);
 }
 
 // Mostrar el detalle de una solicitud
@@ -68,6 +99,14 @@ function showDetalleSolicitud(solicitudId) {
                                 <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
                             </div>
                         </div>
+                        ${solicitud.creadoPor ? `
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Creado por:</span>
+                                <span class="detail-value">${solicitud.creadoPor.displayName}</span>
+                            </div>
+                        </div>
+                        ` : ''}
                     </div>
                 </div>
             </div>
@@ -220,15 +259,31 @@ function showActualizarEstadoModal(solicitudId) {
     }
 }
 
-// Manejar la actualización de estado
-async function handleActualizarEstado(e) {
+// Manejar la actualización de estado (será sobreescrito en app.js)
+function handleActualizarEstado(e) {
     e.preventDefault();
     
-    mostrarSincronizacion('Actualizando estado...');
-    
+    // Este método es un placeholder y será reemplazado por la versión
+    // que incluye información del usuario en app.js
     const solicitudId = solicitudIdInput.value;
     const nuevoEstado = nuevoEstadoSelect.value;
     const observaciones = observacionesText.value;
+    
+    // Verificar si tenemos el usuario actual
+    if (typeof getCurrentUser === 'function') {
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+            // Usar la función con información de usuario
+            if (typeof handleActualizarEstadoConUsuario === 'function') {
+                handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
+                return;
+            }
+        }
+    }
+    
+    // Si no se pudo obtener el usuario o no existe la función con usuario,
+    // usar la implementación básica
+    mostrarSincronizacion('Actualizando estado...');
     
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
@@ -246,18 +301,24 @@ async function handleActualizarEstado(e) {
                 fecha: new Date().toISOString(),
                 estado: nuevoEstado,
                 observaciones: observaciones,
-                usuario: currentRole === 'admin' ? 'usuario_admin' : 'usuario_fabricacion'
+                usuario: 'Usuario del sistema' // Valor genérico sin autenticación
             });
             
             // Guardar en Firebase
-            await solicitudesRef.child(solicitudId).update(solicitudActualizada);
-            
-            // Cerrar el modal
-            const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
-            modal.hide();
-            
-            mostrarAlerta('Estado actualizado correctamente.', 'success');
-            ocultarSincronizacion();
+            solicitudesRef.child(solicitudId).update(solicitudActualizada)
+                .then(() => {
+                    // Cerrar el modal
+                    const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
+                    modal.hide();
+                    
+                    mostrarAlerta('Estado actualizado correctamente.', 'success');
+                    ocultarSincronizacion();
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el estado:', error);
+                    mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
+                    ocultarSincronizacion();
+                });
         } catch (error) {
             console.error('Error al actualizar el estado:', error);
             mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
@@ -267,30 +328,4 @@ async function handleActualizarEstado(e) {
         mostrarAlerta('No se encontró la solicitud.', 'danger');
         ocultarSincronizacion();
     }
-}
-
-// Función para mostrar alertas
-function mostrarAlerta(mensaje, tipo = 'info') {
-    // Crear elemento de alerta
-    const alertContainer = document.createElement('div');
-    alertContainer.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
-    alertContainer.style.top = '15px';
-    alertContainer.style.right = '15px';
-    alertContainer.style.zIndex = '9999';
-    alertContainer.style.maxWidth = '300px';
-    alertContainer.style.boxShadow = '0 0.25rem 0.5rem rgba(0, 0, 0, 0.15)';
-    
-    alertContainer.innerHTML = `
-        ${mensaje}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    `;
-    
-    // Añadir al body
-    document.body.appendChild(alertContainer);
-    
-    // Auto-cerrar después de 3 segundos
-    setTimeout(() => {
-        const alert = bootstrap.Alert.getOrCreateInstance(alertContainer);
-        alert.close();
-    }, 3000);
 }
