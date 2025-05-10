@@ -241,6 +241,23 @@ function addItem() {
         if (input) input.focus();
     }, 100);
 }
+// Función para establecer la fecha actual en el formulario
+function setFechaActual() {
+    const fechaInput = document.getElementById('fecha-solicitud');
+    if (fechaInput) {
+        // Obtener fecha actual en formato YYYY-MM-DD
+        const hoy = new Date();
+        const año = hoy.getFullYear();
+        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dia = String(hoy.getDate()).padStart(2, '0');
+        
+        const fechaFormateada = `${año}-${mes}-${dia}`;
+        
+        // Establecer el valor y hacer el campo de solo lectura
+        fechaInput.value = fechaFormateada;
+        fechaInput.setAttribute('readonly', 'readonly');
+    }
+}
 
 // Eliminar un item del formulario
 function removeItem(button) {
