@@ -69,6 +69,51 @@ function setupAdminListeners() {
     if (statsBtn && typeof generarEstadisticas === 'function') {
         statsBtn.addEventListener('click', generarEstadisticas);
     }
+    
+    // Configurar listeners para botones en la tabla
+    setupAdminButtonListeners();
+}
+
+// Asegurar que los botones funcionan en admin
+function setupAdminButtonListeners() {
+    // Delegar eventos para los botones en la tabla
+    const tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
+    if (tablaSolicitudesAdmin) {
+        tablaSolicitudesAdmin.addEventListener('click', (e) => {
+            let targetButton = null;
+            
+            // Detectar botón de detalle
+            if (e.target.classList.contains('btn-detalle')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-detalle')) {
+                targetButton = e.target.closest('.btn-detalle');
+            }
+            
+            if (targetButton) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                if (solicitudId && typeof window.showDetalleSolicitud === 'function') {
+                    window.showDetalleSolicitud(solicitudId);
+                }
+                e.stopPropagation();
+                return;
+            }
+            
+            // Detectar botón de cambiar estado
+            if (e.target.classList.contains('btn-cambiar-estado')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-cambiar-estado')) {
+                targetButton = e.target.closest('.btn-cambiar-estado');
+            }
+            
+            if (targetButton) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                if (solicitudId && typeof window.showActualizarEstadoModal === 'function') {
+                    window.showActualizarEstadoModal(solicitudId);
+                }
+                e.stopPropagation();
+            }
+        });
+    }
 }
 
 // Cargar datos para el panel de Admin
@@ -352,8 +397,42 @@ function generarEstadisticas() {
     
     document.body.appendChild(modalContainer);
     
-    const modal = new bootstrap.Modal(modalContainer);
-    modal.show();
+    // Limpiar cualquier modal o backdrop existente
+    const existingBackdrop = document.querySelector('.modal-backdrop');
+    if (existingBackdrop) {
+        existingBackdrop.remove();
+    }
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Asegurarse de que no hay una instancia previa del modal
+    let modalInstance = bootstrap.Modal.getInstance(modalContainer);
+    if (modalInstance) {
+        modalInstance.dispose();
+    }
+    
+    modalInstance = new bootstrap.Modal(modalContainer);
+    
+    // Agregar evento para limpiar correctamente al cerrar
+    modalContainer.addEventListener('hidden.bs.modal', function() {
+        // Limpiar cualquier backdrop que haya quedado
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Eliminar el modal del DOM después de cerrarse
+        setTimeout(() => {
+            document.body.removeChild(modalContainer);
+            delete window.exportarEstadisticas;
+        }, 300);
+    }, { once: true });
+    
+    modalInstance.show();
     
     // Función para exportar estadísticas
     window.exportarEstadisticas = function() {
@@ -383,10 +462,9 @@ function generarEstadisticas() {
         
         mostrarAlerta('Estadísticas exportadas correctamente', 'success');
     };
-    
-    // Limpiar al cerrar
-    modalContainer.addEventListener('hidden.bs.modal', () => {
-        document.body.removeChild(modalContainer);
-        delete window.exportarEstadisticas;
-    });
 }
+
+// Asegurarse de que los listeners estén configurados al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    setupAdminButtonListeners();
+});
