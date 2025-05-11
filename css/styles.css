@@ -659,3 +659,31 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
 ::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+/* Mejorar apariencia de grupos de botones en tablas */
+.btn-group .btn {
+    margin-right: 2px;
+}
+
+@media (max-width: 767.98px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn-group .btn {
+        margin-right: 0;
+        margin-bottom: 3px;
+        border-radius: 0.25rem !important;
+    }
+}
+
+/* Estilo para modal de confirmación de eliminación */
+#confirmar-eliminacion-modal .modal-header {
+    background-color: #dc3545;
+    color: white;
+}
+
+#confirmar-eliminacion-modal .modal-body strong {
+    color: #dc3545;
+}
