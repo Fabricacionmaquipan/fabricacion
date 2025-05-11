@@ -301,7 +301,6 @@ function handleNuevaSolicitudConUsuario(e, user) {
 }
 
 // Manejar la actualización de estado incluyendo información del usuario actual
-// Manejar la actualización de estado incluyendo información del usuario actual
 function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
@@ -342,9 +341,22 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
             // Guardar en Firebase
             solicitudesRef.child(solicitudId).update(solicitudActualizada)
                 .then(() => {
-                    // Cerrar el modal
+                    // Cerrar el modal correctamente
                     const modal = bootstrap.Modal.getInstance(document.getElementById('actualizar-estado-modal'));
-                    if (modal) modal.hide();
+                    if (modal) {
+                        modal.hide();
+                        
+                        // Limpiar backdrop manualmente
+                        setTimeout(() => {
+                            const backdrop = document.querySelector('.modal-backdrop');
+                            if (backdrop) {
+                                backdrop.remove();
+                            }
+                            document.body.classList.remove('modal-open');
+                            document.body.style.overflow = '';
+                            document.body.style.paddingRight = '';
+                        }, 300);
+                    }
                     
                     mostrarAlerta('Estado actualizado correctamente.', 'success');
                     ocultarSincronizacion();
