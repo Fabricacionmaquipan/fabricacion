@@ -15,58 +15,11 @@ function setupModalsListeners() {
     if (actualizarEstadoForm) {
         actualizarEstadoForm.addEventListener('submit', handleActualizarEstado);
     }
-    
-    // Delegación de eventos para botones de modales
-    document.addEventListener('click', (e) => {
-        // Evento para mostrar detalle
-        if (e.target.classList.contains('btn-detalle') || e.target.closest('.btn-detalle')) {
-            const button = e.target.classList.contains('btn-detalle') ? e.target : e.target.closest('.btn-detalle');
-            const solicitudId = button.getAttribute('data-id');
-            showDetalleSolicitud(solicitudId);
-        }
-        
-        // Evento para cambiar estado
-        if (e.target.classList.contains('btn-cambiar-estado') || e.target.closest('.btn-cambiar-estado')) {
-            // Verificar permisos
-            if (!hasPermission('cambiar_estado')) {
-                mostrarAlerta('No tienes permisos para cambiar el estado de las solicitudes', 'warning');
-                return;
-            }
-            
-            const button = e.target.classList.contains('btn-cambiar-estado') ? e.target : e.target.closest('.btn-cambiar-estado');
-            const solicitudId = button.getAttribute('data-id');
-            showActualizarEstadoModal(solicitudId);
-        }
-    });
-}
-
-// Verificar permisos del usuario actual
-function hasPermission(action) {
-    // Si no hay sistema de autenticación implementado, permitir todo
-    if (typeof getCurrentUser !== 'function') return true;
-    
-    // Si hay función de verificación de permisos, usarla
-    if (typeof window.hasPermission === 'function') {
-        return window.hasPermission(action);
-    }
-    
-    // Verificación básica basada en roles
-    const user = getCurrentUser();
-    if (!user) return false;
-    
-    // Permisos por rol
-    const permisos = {
-        'bodega': ['crear_solicitud', 'ver_solicitudes_bodega'],
-        'fabricacion': ['ver_solicitudes', 'cambiar_estado'],
-        'admin': ['ver_solicitudes', 'cambiar_estado', 'eliminar_solicitud', 'exportar_datos', 'ver_estadisticas']
-    };
-    
-    const permisosUsuario = permisos[user.role] || [];
-    return permisosUsuario.includes(action);
 }
 
 // Mostrar el detalle de una solicitud
 function showDetalleSolicitud(solicitudId) {
+    console.log("Mostrando detalle de solicitud ID:", solicitudId);
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
@@ -224,6 +177,7 @@ function getStatusCardClass(estado) {
 
 // Mostrar el modal para actualizar estado
 function showActualizarEstadoModal(solicitudId) {
+    console.log("Mostrando modal de actualización para ID:", solicitudId);
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
@@ -262,6 +216,7 @@ function showActualizarEstadoModal(solicitudId) {
 // Manejar la actualización de estado (será sobreescrito en app.js)
 function handleActualizarEstado(e) {
     e.preventDefault();
+    console.log("Manejando actualización de estado");
     
     // Este método es un placeholder y será reemplazado por la versión
     // que incluye información del usuario en app.js
@@ -275,6 +230,7 @@ function handleActualizarEstado(e) {
         if (currentUser) {
             // Usar la función con información de usuario
             if (typeof handleActualizarEstadoConUsuario === 'function') {
+                console.log("Llamando a handleActualizarEstadoConUsuario");
                 handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
                 return;
             }
@@ -283,6 +239,7 @@ function handleActualizarEstado(e) {
     
     // Si no se pudo obtener el usuario o no existe la función con usuario,
     // usar la implementación básica
+    console.log("Usando implementación básica de actualización");
     mostrarSincronizacion('Actualizando estado...');
     
     const solicitud = solicitudes.find(s => s.id === solicitudId);
@@ -329,3 +286,7 @@ function handleActualizarEstado(e) {
         ocultarSincronizacion();
     }
 }
+
+// Exponer funciones al ámbito global para que puedan ser llamadas desde delegación de eventos
+window.showDetalleSolicitud = showDetalleSolicitud;
+window.showActualizarEstadoModal = showActualizarEstadoModal;
