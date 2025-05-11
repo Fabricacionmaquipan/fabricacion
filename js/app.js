@@ -308,6 +308,14 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
         try {
             mostrarSincronizacion('Actualizando estado...');
             
+            // Verificar que el user tenga un id antes de agregarlo al historial
+            if (!user || !user.id) {
+                console.error("Error: Usuario no definido o sin ID");
+                mostrarAlerta('Error al actualizar: usuario no válido', 'danger');
+                ocultarSincronizacion();
+                return;
+            }
+            
             // Crear una copia de la solicitud para actualizar
             const solicitudActualizada = {...solicitud};
             
@@ -320,8 +328,8 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                 fecha: new Date().toISOString(),
                 estado: nuevoEstado,
                 observaciones: observaciones,
-                usuario: user.displayName,
-                userId: user.id
+                usuario: user.displayName || 'Usuario del sistema',
+                userId: user.id // Ahora nos aseguramos que siempre haya un user.id
             });
             
             // Guardar en Firebase
