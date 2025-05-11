@@ -3,6 +3,11 @@
 // Elementos DOM de Admin
 const tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
 
+// Variables para paginación y filtrado
+let currentPageAdmin = 1;
+let filterTermAdmin = '';
+let filterStatusAdmin = 'all';
+
 // Configurar event listeners específicos de admin
 function setupAdminListeners() {
     // Filtros y búsqueda
@@ -17,8 +22,29 @@ function setupAdminListeners() {
                 item.classList.add('active');
                 
                 // Filtrar según el valor seleccionado
-                const filtro = item.textContent.trim();
-                filtrarSolicitudesAdmin(filtro);
+                const filterText = item.textContent.trim().toLowerCase();
+                switch (filterText) {
+                    case 'pendientes':
+                        filterStatusAdmin = 'pendientes';
+                        break;
+                    case 'en fabricación':
+                        filterStatusAdmin = 'fabricacion';
+                        break;
+                    case 'entregadas':
+                        filterStatusAdmin = 'entregadas';
+                        break;
+                    default:
+                        filterStatusAdmin = 'all';
+                }
+                
+                // Actualizar texto del botón de filtro
+                const filterButton = document.querySelector('#admin-panel .dropdown-toggle');
+                if (filterButton) {
+                    filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> ${item.textContent.trim()}`;
+                }
+                
+                currentPageAdmin = 1; // Reiniciar a primera página al filtrar
+                cargarDatosAdmin();
             });
         });
     }
@@ -27,84 +53,21 @@ function setupAdminListeners() {
     const searchInput = document.querySelector('#admin-panel .input-group input');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            buscarSolicitudesAdmin(searchTerm);
+            filterTermAdmin = e.target.value.toLowerCase();
+            currentPageAdmin = 1; // Reiniciar a primera página al buscar
+            cargarDatosAdmin();
         });
     }
-}
-
-// Filtrar solicitudes por estado
-function filtrarSolicitudesAdmin(filtro) {
-    if (!tablaSolicitudesAdmin) return;
     
-    const rows = tablaSolicitudesAdmin.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-        if (filtro === 'Todas') {
-            row.style.display = '';
-            return;
-        }
-        
-        const estadoCell = row.querySelector('td:nth-child(5)');
-        if (estadoCell) {
-            const estadoTexto = estadoCell.textContent.trim();
-            
-            let mostrar = false;
-            switch (filtro) {
-                case 'Pendientes':
-                    mostrar = estadoTexto.includes('Solicitud enviada');
-                    break;
-                case 'En Fabricación':
-                    mostrar = estadoTexto.includes('En fabricación');
-                    break;
-                case 'Entregadas':
-                    mostrar = estadoTexto.includes('Entregado');
-                    break;
-                default:
-                    mostrar = true;
-            }
-            
-            row.style.display = mostrar ? '' : 'none';
-        }
-    });
-    
-    // Actualizar texto de footer
-    const footerText = document.querySelector('#admin-panel .card-footer small');
-    if (footerText) {
-        const visibleCount = [...rows].filter(row => row.style.display !== 'none').length;
-        footerText.textContent = `Mostrando ${visibleCount} de ${rows.length} solicitudes (Filtro: ${filtro})`;
-    }
-}
-
-// Buscar solicitudes por término
-function buscarSolicitudesAdmin(searchTerm) {
-    if (!tablaSolicitudesAdmin || !searchTerm) {
-        // Si el término está vacío, mostrar todas
-        const rows = tablaSolicitudesAdmin.querySelectorAll('tr');
-        rows.forEach(row => row.style.display = '');
-        return;
+    // Botones de exportación y estadísticas (ya existentes)
+    const exportBtn = document.querySelector('#admin-panel .btn-outline-info');
+    if (exportBtn && typeof exportarSolicitudesCSV === 'function') {
+        exportBtn.addEventListener('click', exportarSolicitudesCSV);
     }
     
-    const rows = tablaSolicitudesAdmin.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-        let found = false;
-        
-        // Buscar en todas las celdas
-        row.querySelectorAll('td').forEach(cell => {
-            if (cell.textContent.toLowerCase().includes(searchTerm)) {
-                found = true;
-            }
-        });
-        
-        row.style.display = found ? '' : 'none';
-    });
-    
-    // Actualizar texto de footer
-    const footerText = document.querySelector('#admin-panel .card-footer small');
-    if (footerText) {
-        const visibleCount = [...rows].filter(row => row.style.display !== 'none').length;
-        footerText.textContent = `Mostrando ${visibleCount} de ${rows.length} solicitudes (Búsqueda: "${searchTerm}")`;
+    const statsBtn = document.querySelector('#admin-panel .btn-outline-success');
+    if (statsBtn && typeof generarEstadisticas === 'function') {
+        statsBtn.addEventListener('click', generarEstadisticas);
     }
 }
 
@@ -125,15 +88,39 @@ function cargarDatosAdmin() {
                 </td>
             </tr>
         `;
+        
+        // Ocultar paginación
+        updateAdminPagination(0);
         return;
     }
     
-    // Ordenar solicitudes por fecha (más recientes primero)
-    const solicitudesOrdenadas = [...solicitudes].sort((a, b) => {
-        return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
-    });
+    // Paginar y filtrar solicitudes
+    const { items: solicitudesPaginadas, totalItems } = paginateAndFilterItems(
+        solicitudes, 
+        currentPageAdmin,
+        filterTermAdmin,
+        filterStatusAdmin
+    );
     
-    solicitudesOrdenadas.forEach(solicitud => {
+    // Actualizar paginación
+    updateAdminPagination(totalItems);
+    
+    if (solicitudesPaginadas.length === 0) {
+        tablaSolicitudesAdmin.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No se encontraron solicitudes</p>
+                        <small class="text-muted">Intenta con otros criterios de búsqueda</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    solicitudesPaginadas.forEach(solicitud => {
         const tr = document.createElement('tr');
         
         // Determinar clase según el estado
@@ -172,15 +159,28 @@ function cargarDatosAdmin() {
         
         tablaSolicitudesAdmin.appendChild(tr);
     });
-    
-    // Actualizar texto de footer
-    const footerText = document.querySelector('#admin-panel .card-footer small');
-    if (footerText) {
-        footerText.textContent = `Mostrando ${solicitudesOrdenadas.length} solicitudes`;
+}
+
+// Actualizar controles de paginación para admin
+function updateAdminPagination(totalItems) {
+    createPaginationControls(
+        '#admin-panel .card-footer',
+        totalItems,
+        currentPageAdmin,
+        handlePageChange,
+        'admin'
+    );
+}
+
+// Manejar cambio de página
+function handlePageChange(newPage, panelName) {
+    if (panelName === 'admin') {
+        currentPageAdmin = newPage;
+        cargarDatosAdmin();
     }
 }
 
-// Exportar solicitudes a CSV (funcionalidad adicional)
+// Exportar solicitudes a CSV 
 function exportarSolicitudesCSV() {
     if (solicitudes.length === 0) {
         mostrarAlerta('No hay solicitudes para exportar', 'warning');
@@ -228,7 +228,7 @@ function exportarSolicitudesCSV() {
     mostrarAlerta('Solicitudes exportadas correctamente', 'success');
 }
 
-// Función para generar estadísticas (funcionalidad adicional)
+// Función para generar estadísticas
 function generarEstadisticas() {
     if (solicitudes.length === 0) {
         mostrarAlerta('No hay datos para generar estadísticas', 'warning');
