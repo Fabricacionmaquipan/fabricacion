@@ -262,3 +262,60 @@ function paginateAndFilterItems(items, currentPage, filterTerm = '', filterStatu
         totalItems: totalFilteredItems
     };
 }
+
+// Función para limpiar modales bloqueados
+function limpiarModalesBloqueados() {
+    console.log("Limpiando modales bloqueados");
+    
+    // Eliminar todos los backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Limpiar clases y estilos del body
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Asegurarse de que todos los modales estén ocultos
+    document.querySelectorAll('.modal').forEach(modal => {
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        if (modalInstance) {
+            try {
+                modalInstance.hide();
+                modalInstance.dispose();
+            } catch (error) {
+                console.error("Error al limpiar modal:", error);
+            }
+        }
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+        modal.removeAttribute('role');
+    });
+}
+
+// Agregar manejador para tecla ESC global
+document.addEventListener('keydown', function(e) {
+    // Si se presiona ESC (código 27)
+    if (e.keyCode === 27) {
+        setTimeout(limpiarModalesBloqueados, 300);
+    }
+});
+
+// Agregar manejador para clicks fuera de los modales
+document.addEventListener('click', function(e) {
+    // Si se hizo clic en un backdrop
+    if (e.target.classList.contains('modal-backdrop')) {
+        setTimeout(limpiarModalesBloqueados, 300);
+    }
+});
+
+// Exponer función globalmente
+window.limpiarModalesBloqueados = limpiarModalesBloqueados;
+
+// Verificar y limpiar modales al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Esperar un momento para asegurarse de que todo está cargado
+    setTimeout(limpiarModalesBloqueados, 500);
+});
