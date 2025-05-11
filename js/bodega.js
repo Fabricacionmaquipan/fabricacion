@@ -104,6 +104,41 @@ function setupBodegaListeners() {
             });
         });
     }
+    
+    // Configurar los botones de detalle y acción
+    setupBodegaButtonListeners();
+}
+
+// Configurar listeners específicos para los botones de acción en la tabla
+function setupBodegaButtonListeners() {
+    // Si la tabla existe, configurar delegación de eventos para botones
+    if (tablaSolicitudesBodega) {
+        tablaSolicitudesBodega.addEventListener('click', (e) => {
+            let targetButton = null;
+            
+            // Comprobar si el clic fue en el botón de detalles o en un elemento dentro del botón
+            if (e.target.classList.contains('btn-detalle')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-detalle')) {
+                targetButton = e.target.closest('.btn-detalle');
+            }
+            
+            // Si encontramos un botón de detalle, mostrar el modal de detalles
+            if (targetButton) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                console.log("Botón detalle clickeado, ID:", solicitudId);
+                if (solicitudId && typeof window.showDetalleSolicitud === 'function') {
+                    window.showDetalleSolicitud(solicitudId);
+                } else {
+                    console.error("No se pudo mostrar el detalle. ID:", solicitudId, "Función disponible:", typeof window.showDetalleSolicitud);
+                }
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+    } else {
+        console.warn("No se encontró la tabla de solicitudes de bodega para configurar listeners");
+    }
 }
 
 // Cargar datos para el panel de Bodega
@@ -185,6 +220,10 @@ function cargarDatosBodega() {
         
         tablaSolicitudesBodega.appendChild(tr);
     });
+    
+    // Refrescar listeners después de cargar datos
+    // No es necesario llamar a setupBodegaButtonListeners() aquí porque 
+    // usamos delegación de eventos en la tabla misma
 }
 
 // Actualizar controles de paginación para bodega
@@ -372,4 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (bodegaPanel && window.getComputedStyle(bodegaPanel).display !== 'none') {
         setFechaActual();
     }
+    
+    // También podemos asegurarnos de que los listeners están configurados
+    setupBodegaButtonListeners();
 });
