@@ -55,4 +55,118 @@ function setupFabricacionListeners() {
         searchInput.addEventListener('input', (e) => {
             filterTermFabricacion = e.target.value.toLowerCase();
             currentPageFabricacion = 1; // Reiniciar a primera página al buscar
-            cargarDatosFabricacion
+            cargarDatosFabricacion();
+        });
+    }
+}
+
+// Cargar datos para el panel de Fabricación
+function cargarDatosFabricacion() {
+    if (!tablaSolicitudesFabricacion) return;
+    
+    tablaSolicitudesFabricacion.innerHTML = '';
+    
+    if (solicitudes.length === 0) {
+        tablaSolicitudesFabricacion.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No hay solicitudes en el sistema</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        
+        // Ocultar paginación
+        updateFabricacionPagination(0);
+        return;
+    }
+    
+    // Paginar y filtrar solicitudes
+    const { items: solicitudesPaginadas, totalItems } = paginateAndFilterItems(
+        solicitudes, 
+        currentPageFabricacion,
+        filterTermFabricacion,
+        filterStatusFabricacion
+    );
+    
+    // Actualizar paginación
+    updateFabricacionPagination(totalItems);
+    
+    if (solicitudesPaginadas.length === 0) {
+        tablaSolicitudesFabricacion.innerHTML = `
+            <tr>
+                <td colspan="7" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No se encontraron solicitudes</p>
+                        <small class="text-muted">Intenta con otros criterios de búsqueda</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    solicitudesPaginadas.forEach(solicitud => {
+        const tr = document.createElement('tr');
+        
+        // Determinar clase según el estado
+        if (solicitud.estado === 'Entregado') {
+            tr.classList.add('table-success');
+        } else if (solicitud.estado === 'En fabricación') {
+            tr.classList.add('table-warning');
+        }
+        
+        // Crear el detalle de productos
+        const detalleProductos = solicitud.items.map(item => 
+            `<div><strong>${item.producto}:</strong> ${item.cantidad}</div>`
+        ).join('');
+        
+        // Crear ID corto para mejor visualización
+        const idCorto = solicitud.id.substring(solicitud.id.length - 6);
+        
+        tr.innerHTML = `
+            <td data-label="ID">${idCorto}</td>
+            <td data-label="Nota Venta">${solicitud.notaVenta}</td>
+            <td data-label="Fecha">${formatDate(solicitud.fechaSolicitud)}</td>
+            <td data-label="Detalle">${detalleProductos}</td>
+            <td data-label="Estado">
+                <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
+            </td>
+            <td data-label="Observaciones">${solicitud.observaciones || '<span class="text-muted">Sin observaciones</span>'}</td>
+            <td data-label="Acciones">
+                <button class="btn btn-sm btn-primary btn-detalle" data-id="${solicitud.id}">
+                    <i class="fas fa-eye me-1"></i>Ver
+                </button>
+                ${solicitud.estado !== 'Entregado' ? `
+                    <button class="btn btn-sm btn-warning btn-cambiar-estado" data-id="${solicitud.id}">
+                        <i class="fas fa-edit me-1"></i>Cambiar
+                    </button>
+                ` : ''}
+            </td>
+        `;
+        
+        tablaSolicitudesFabricacion.appendChild(tr);
+    });
+}
+
+// Actualizar controles de paginación para fabricación
+function updateFabricacionPagination(totalItems) {
+    createPaginationControls(
+        '#fabricacion-panel .card-footer',
+        totalItems,
+        currentPageFabricacion,
+        handlePageChange,
+        'fabricacion'
+    );
+}
+
+// Manejar cambio de página
+function handlePageChange(newPage, panelName) {
+    if (panelName === 'fabricacion') {
+        currentPageFabricacion = newPage;
+        cargarDatosFabricacion();
+    }
+}
