@@ -58,6 +58,42 @@ function setupFabricacionListeners() {
             cargarDatosFabricacion();
         });
     }
+    
+    // Añadir event listeners para botones de cambiar estado y ver detalle
+    // Usando delegación de eventos en el contenedor de la tabla
+    if (tablaSolicitudesFabricacion) {
+        tablaSolicitudesFabricacion.addEventListener('click', (e) => {
+            // Verificar si se hizo clic en un botón dentro de la tabla
+            let targetButton = null;
+            
+            // Comprobar si el clic fue en el botón o en un elemento dentro del botón (como un ícono)
+            if (e.target.classList.contains('btn-cambiar-estado')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-cambiar-estado')) {
+                targetButton = e.target.closest('.btn-cambiar-estado');
+            }
+            
+            // Si encontramos un botón de cambiar estado, mostrar el modal
+            if (targetButton) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                showActualizarEstadoModal(solicitudId);
+                e.stopPropagation(); // Evitar propagación del evento
+            }
+            
+            // Hacer lo mismo para botones de detalle
+            if (e.target.classList.contains('btn-detalle')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-detalle')) {
+                targetButton = e.target.closest('.btn-detalle');
+            }
+            
+            if (targetButton && targetButton.classList.contains('btn-detalle')) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                showDetalleSolicitud(solicitudId);
+                e.stopPropagation(); // Evitar propagación del evento
+            }
+        });
+    }
 }
 
 // Cargar datos para el panel de Fabricación
