@@ -6,6 +6,11 @@ const itemsContainer = document.getElementById('items-container');
 const addItemBtn = document.getElementById('add-item');
 const tablaSolicitudesBodega = document.getElementById('tabla-solicitudes-bodega');
 
+// Variables para paginación y filtrado
+let currentPageBodega = 1;
+let filterTermBodega = '';
+let filterStatusBodega = 'all';
+
 // Función para establecer la fecha actual en el formulario
 function setFechaActual() {
     const fechaInput = document.getElementById('fecha-solicitud');
@@ -46,11 +51,12 @@ function setupBodegaListeners() {
     });
     
     // Buscar en solicitudes
-    const buscarInput = document.getElementById('buscar-solicitud');
+    const buscarInput = document.getElementById('buscar-solicitud-bodega');
     if (buscarInput) {
         buscarInput.addEventListener('input', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            filtrarSolicitudesBodega(searchTerm);
+            filterTermBodega = e.target.value.toLowerCase();
+            currentPageBodega = 1; // Reiniciar a primera página al buscar
+            cargarDatosBodega();
         });
     }
     
@@ -59,27 +65,45 @@ function setupBodegaListeners() {
     if (btnNuevaSolicitud) {
         btnNuevaSolicitud.addEventListener('click', setFechaActual);
     }
-}
-
-// Filtrar solicitudes de bodega
-function filtrarSolicitudesBodega(searchTerm) {
-    if (!tablaSolicitudesBodega) return;
     
-    const rows = tablaSolicitudesBodega.querySelectorAll('tr');
-    
-    rows.forEach(row => {
-        const notaVenta = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        const id = row.querySelector('td:nth-child(1)').textContent.toLowerCase();
-        const fecha = row.querySelector('td:nth-child(3)').textContent.toLowerCase();
-        const estado = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
-        
-        if (notaVenta.includes(searchTerm) || id.includes(searchTerm) || 
-            fecha.includes(searchTerm) || estado.includes(searchTerm)) {
-            row.style.display = '';
-        } else {
-            row.style.display = 'none';
-        }
-    });
+    // Filtrar por estado
+    const filtroDropdownItems = document.querySelectorAll('#bodega-panel .dropdown-item');
+    if (filtroDropdownItems.length > 0) {
+        filtroDropdownItems.forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Actualizar visual
+                filtroDropdownItems.forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Establecer filtro según el texto
+                const filterText = this.textContent.trim().toLowerCase();
+                switch (filterText) {
+                    case 'pendientes':
+                        filterStatusBodega = 'pendientes';
+                        break;
+                    case 'en fabricación':
+                        filterStatusBodega = 'fabricacion';
+                        break;
+                    case 'entregadas':
+                        filterStatusBodega = 'entregadas';
+                        break;
+                    default:
+                        filterStatusBodega = 'all';
+                }
+                
+                // Actualizar texto del botón de filtro
+                const filterButton = document.querySelector('#bodega-panel .dropdown-toggle');
+                if (filterButton) {
+                    filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> ${this.textContent.trim()}`;
+                }
+                
+                currentPageBodega = 1; // Reiniciar a primera página al filtrar
+                cargarDatosBodega();
+            });
+        });
+    }
 }
 
 // Cargar datos para el panel de Bodega
@@ -100,15 +124,39 @@ function cargarDatosBodega() {
                 </td>
             </tr>
         `;
+        
+        // Ocultar paginación
+        updateBodegaPagination(0);
         return;
     }
     
-    // Ordenar solicitudes por fecha (más recientes primero)
-    const solicitudesOrdenadas = [...solicitudes].sort((a, b) => {
-        return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
-    });
+    // Paginar y filtrar solicitudes
+    const { items: solicitudesPaginadas, totalItems } = paginateAndFilterItems(
+        solicitudes, 
+        currentPageBodega,
+        filterTermBodega,
+        filterStatusBodega
+    );
     
-    solicitudesOrdenadas.forEach(solicitud => {
+    // Actualizar paginación
+    updateBodegaPagination(totalItems);
+    
+    if (solicitudesPaginadas.length === 0) {
+        tablaSolicitudesBodega.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No se encontraron solicitudes</p>
+                        <small class="text-muted">Intenta con otros criterios de búsqueda</small>
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    solicitudesPaginadas.forEach(solicitud => {
         const tr = document.createElement('tr');
         
         // Determinar clase según el estado
@@ -137,6 +185,25 @@ function cargarDatosBodega() {
         
         tablaSolicitudesBodega.appendChild(tr);
     });
+}
+
+// Actualizar controles de paginación para bodega
+function updateBodegaPagination(totalItems) {
+    createPaginationControls(
+        '#bodega-panel .card-footer',
+        totalItems,
+        currentPageBodega,
+        handlePageChange,
+        'bodega'
+    );
+}
+
+// Manejar cambios de página
+function handlePageChange(newPage, panelName) {
+    if (panelName === 'bodega') {
+        currentPageBodega = newPage;
+        cargarDatosBodega();
+    }
 }
 
 // Manejar el envío del formulario de nueva solicitud
@@ -221,6 +288,9 @@ async function handleNuevaSolicitud(e) {
         
         // Restablecer la fecha actual para la próxima solicitud
         setFechaActual();
+        
+        // Ir a la primera página para ver la solicitud recién creada
+        currentPageBodega = 1;
         
         mostrarAlerta('Solicitud creada correctamente.', 'success');
         ocultarSincronizacion();
