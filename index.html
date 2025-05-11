@@ -219,8 +219,22 @@
                             <div class="d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Solicitudes</h5>
                                 <div class="d-flex gap-2">
+                                    <!-- Añadir menú desplegable para filtrar por estado -->
+                                    <div class="dropdown d-none d-md-block">
+                                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-filter me-1"></i> Todas
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item active" href="#">Todas</a></li>
+                                            <li><a class="dropdown-item" href="#">Pendientes</a></li>
+                                            <li><a class="dropdown-item" href="#">En Fabricación</a></li>
+                                            <li><a class="dropdown-item" href="#">Entregadas</a></li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Actualizar campo de búsqueda -->
                                     <div class="input-group input-group-sm">
-                                        <input type="text" class="form-control" placeholder="Buscar..." id="buscar-solicitud">
+                                        <input type="text" class="form-control" placeholder="Buscar..." id="buscar-solicitud-bodega">
                                         <button class="btn btn-outline-secondary" type="button">
                                             <i class="fas fa-search"></i>
                                         </button>
@@ -244,8 +258,8 @@
                                 </tbody>
                             </table>
                         </div>
-                        <div class="card-footer text-center p-2">
-                            <small class="text-muted">Mostrando todas las solicitudes</small>
+                        <div class="card-footer p-2">
+                            <!-- Aquí se insertarán los controles de paginación -->
                         </div>
                     </div>
                 </div>
@@ -261,7 +275,7 @@
                     <div class="d-flex gap-2">
                         <div class="dropdown">
                             <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-1"></i> Filtrar
+                                <i class="fas fa-filter me-1"></i> Todas
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item active" href="#">Todas</a></li>
@@ -299,16 +313,8 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="card-footer d-flex justify-content-between align-items-center p-2">
-                        <small class="text-muted">Mostrando todas las solicitudes</small>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="card-footer p-2">
+                        <!-- Aquí se insertarán los controles de paginación -->
                     </div>
                 </div>
             </div>
@@ -331,7 +337,7 @@
                         
                         <div class="dropdown">
                             <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-filter me-1"></i> Filtrar
+                                <i class="fas fa-filter me-1"></i> Todas
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item active" href="#">Todas</a></li>
@@ -369,16 +375,8 @@
                             </tbody>
                         </table>
                     </div>
-                    <div class="card-footer d-flex justify-content-between align-items-center p-2">
-                        <small class="text-muted">Mostrando todas las solicitudes</small>
-                        <div class="btn-group btn-group-sm">
-                            <button type="button" class="btn btn-outline-secondary">
-                                <i class="fas fa-chevron-left"></i>
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary">
-                                <i class="fas fa-chevron-right"></i>
-                            </button>
-                        </div>
+                    <div class="card-footer p-2">
+                        <!-- Aquí se insertarán los controles de paginación -->
                     </div>
                 </div>
                 
