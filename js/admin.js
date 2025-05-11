@@ -72,6 +72,12 @@ function setupAdminListeners() {
     
     // Configurar listeners para botones en la tabla
     setupAdminButtonListeners();
+    
+    // Configurar listener para el botón de confirmar eliminación
+    const confirmarEliminacionBtn = document.getElementById('confirmar-eliminacion-btn');
+    if (confirmarEliminacionBtn) {
+        confirmarEliminacionBtn.addEventListener('click', eliminarSolicitud);
+    }
 }
 
 // Asegurar que los botones funcionan en admin
@@ -111,9 +117,121 @@ function setupAdminButtonListeners() {
                     window.showActualizarEstadoModal(solicitudId);
                 }
                 e.stopPropagation();
+                return;
+            }
+            
+            // Detectar botón de eliminar
+            if (e.target.classList.contains('btn-eliminar')) {
+                targetButton = e.target;
+            } else if (e.target.closest('.btn-eliminar')) {
+                targetButton = e.target.closest('.btn-eliminar');
+            }
+            
+            if (targetButton) {
+                const solicitudId = targetButton.getAttribute('data-id');
+                const notaVenta = targetButton.getAttribute('data-nota');
+                if (solicitudId) {
+                    showConfirmarEliminacionModal(solicitudId, notaVenta);
+                }
+                e.stopPropagation();
             }
         });
     }
+}
+
+// Mostrar modal de confirmación de eliminación
+function showConfirmarEliminacionModal(solicitudId, notaVenta) {
+    console.log("Mostrando modal de confirmación de eliminación para ID:", solicitudId);
+    
+    // Limpiar cualquier modal o backdrop existente
+    const existingBackdrop = document.querySelector('.modal-backdrop');
+    if (existingBackdrop) {
+        existingBackdrop.remove();
+    }
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    
+    // Establecer los valores en el modal
+    document.getElementById('eliminar-solicitud-id').value = solicitudId;
+    document.getElementById('eliminar-nota-venta').textContent = notaVenta || solicitudId;
+    
+    // Asegurarse de que no hay una instancia previa del modal
+    const confirmarModal = document.getElementById('confirmar-eliminacion-modal');
+    let modalInstance = bootstrap.Modal.getInstance(confirmarModal);
+    if (modalInstance) {
+        modalInstance.dispose();
+    }
+    
+    // Inicializar y mostrar el modal
+    modalInstance = new bootstrap.Modal(confirmarModal, {
+        backdrop: true,
+        keyboard: true
+    });
+    
+    // Agregar evento para limpiar correctamente al cerrar
+    confirmarModal.addEventListener('hidden.bs.modal', function() {
+        // Limpiar cualquier backdrop que haya quedado
+        const backdrop = document.querySelector('.modal-backdrop');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    }, { once: true });
+    
+    modalInstance.show();
+}
+
+// Función para eliminar una solicitud
+function eliminarSolicitud() {
+    const solicitudId = document.getElementById('eliminar-solicitud-id').value;
+    
+    if (!solicitudId) {
+        mostrarAlerta('Error: No se pudo identificar la solicitud a eliminar', 'danger');
+        return;
+    }
+    
+    // Mostrar indicador de carga
+    mostrarSincronizacion('Eliminando solicitud...');
+    
+    // Eliminar de Firebase
+    solicitudesRef.child(solicitudId).remove()
+        .then(() => {
+            // Cerrar el modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('confirmar-eliminacion-modal'));
+            if (modal) {
+                modal.hide();
+                
+                // Limpiar backdrop manualmente
+                setTimeout(() => {
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }, 300);
+            }
+            
+            // Mostrar mensaje de éxito
+            mostrarAlerta('Solicitud eliminada correctamente', 'success');
+            
+            // Recargar los datos
+            currentPageAdmin = 1; // Volver a la primera página
+            setTimeout(() => {
+                cargarDatosAdmin();
+            }, 500);
+            
+            ocultarSincronizacion();
+        })
+        .catch(error => {
+            console.error('Error al eliminar solicitud:', error);
+            mostrarAlerta('Error al eliminar la solicitud: ' + error.message, 'danger');
+            ocultarSincronizacion();
+        });
 }
 
 // Cargar datos para el panel de Admin
@@ -193,12 +311,17 @@ function cargarDatosAdmin() {
             </td>
             <td data-label="Observaciones">${solicitud.observaciones || '<span class="text-muted">Sin observaciones</span>'}</td>
             <td data-label="Acciones">
-                <button class="btn btn-sm btn-primary btn-detalle" data-id="${solicitud.id}">
-                    <i class="fas fa-eye me-1"></i>Ver
-                </button>
-                <button class="btn btn-sm btn-warning btn-cambiar-estado" data-id="${solicitud.id}">
-                    <i class="fas fa-edit me-1"></i>Editar
-                </button>
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-primary btn-detalle" data-id="${solicitud.id}">
+                        <i class="fas fa-eye me-1"></i>Ver
+                    </button>
+                    <button class="btn btn-sm btn-warning btn-cambiar-estado" data-id="${solicitud.id}">
+                        <i class="fas fa-edit me-1"></i>Editar
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-eliminar" data-id="${solicitud.id}" data-nota="${solicitud.notaVenta}">
+                        <i class="fas fa-trash-alt me-1"></i>Eliminar
+                    </button>
+                </div>
             </td>
         `;
         
@@ -467,4 +590,14 @@ function generarEstadisticas() {
 // Asegurarse de que los listeners estén configurados al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     setupAdminButtonListeners();
+    
+    // Configurar listener para el botón de confirmar eliminación
+    const confirmarEliminacionBtn = document.getElementById('confirmar-eliminacion-btn');
+    if (confirmarEliminacionBtn) {
+        confirmarEliminacionBtn.addEventListener('click', eliminarSolicitud);
+    }
 });
+
+// Exponer funciones globalmente para acceso desde otros scripts
+window.showConfirmarEliminacionModal = showConfirmarEliminacionModal;
+window.eliminarSolicitud = eliminarSolicitud;
