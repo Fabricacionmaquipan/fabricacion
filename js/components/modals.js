@@ -181,6 +181,15 @@ function showActualizarEstadoModal(solicitudId) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
+        // Verificar que tenemos un usuario válido antes de mostrar el modal
+        if (typeof getCurrentUser === 'function') {
+            const currentUser = getCurrentUser();
+            if (!currentUser || !currentUser.id) {
+                mostrarAlerta('Error: Debes iniciar sesión para actualizar estados', 'warning');
+                return;
+            }
+        }
+        
         solicitudIdInput.value = solicitudId;
         
         // Establecer el estado actual
@@ -227,64 +236,22 @@ function handleActualizarEstado(e) {
     // Verificar si tenemos el usuario actual
     if (typeof getCurrentUser === 'function') {
         const currentUser = getCurrentUser();
-        if (currentUser) {
+        if (currentUser && currentUser.id) {
             // Usar la función con información de usuario
             if (typeof handleActualizarEstadoConUsuario === 'function') {
                 console.log("Llamando a handleActualizarEstadoConUsuario");
                 handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
                 return;
             }
+        } else {
+            mostrarAlerta('Error: Debes iniciar sesión para actualizar estados', 'warning');
+            return;
         }
     }
     
     // Si no se pudo obtener el usuario o no existe la función con usuario,
-    // usar la implementación básica
-    console.log("Usando implementación básica de actualización");
-    mostrarSincronizacion('Actualizando estado...');
-    
-    const solicitud = solicitudes.find(s => s.id === solicitudId);
-    
-    if (solicitud) {
-        try {
-            // Crear una copia de la solicitud para actualizar
-            const solicitudActualizada = {...solicitud};
-            
-            // Actualizar estado y observaciones
-            solicitudActualizada.estado = nuevoEstado;
-            solicitudActualizada.observaciones = observaciones;
-            
-            // Agregar al historial
-            solicitudActualizada.historial.push({
-                fecha: new Date().toISOString(),
-                estado: nuevoEstado,
-                observaciones: observaciones,
-                usuario: 'Usuario del sistema' // Valor genérico sin autenticación
-            });
-            
-            // Guardar en Firebase
-            solicitudesRef.child(solicitudId).update(solicitudActualizada)
-                .then(() => {
-                    // Cerrar el modal
-                    const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
-                    modal.hide();
-                    
-                    mostrarAlerta('Estado actualizado correctamente.', 'success');
-                    ocultarSincronizacion();
-                })
-                .catch(error => {
-                    console.error('Error al actualizar el estado:', error);
-                    mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
-                    ocultarSincronizacion();
-                });
-        } catch (error) {
-            console.error('Error al actualizar el estado:', error);
-            mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
-            ocultarSincronizacion();
-        }
-    } else {
-        mostrarAlerta('No se encontró la solicitud.', 'danger');
-        ocultarSincronizacion();
-    }
+    // mostrar error y no continuar
+    mostrarAlerta('Error: No se puede actualizar el estado sin un usuario válido', 'danger');
 }
 
 // Exponer funciones al ámbito global para que puedan ser llamadas desde delegación de eventos
