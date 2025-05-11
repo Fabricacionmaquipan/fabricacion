@@ -1,5 +1,8 @@
 // Utilidades globales
 
+// Variables para paginación
+const ITEMS_PER_PAGE = 10; // Solicitudes por página
+
 // Mostrar estado de sincronización
 function mostrarSincronizacion(mensaje, isError = false) {
     const syncStatus = document.getElementById('sync-status');
@@ -118,76 +121,144 @@ function mostrarAlerta(mensaje, tipo = 'info') {
     }, 3000);
 }
 
-// Validar formulario
-function validarFormulario(form) {
-    // Si el navegador soporta validación nativa, usarla
-    if (form.checkValidity) {
-        return form.checkValidity();
+// Funciones de paginación
+// -----------------------
+
+// Crear controles de paginación
+function createPaginationControls(containerSelector, totalItems, currentPage, onPageChange, panelName) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Calcular páginas totales
+    const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+    
+    // No mostrar paginación si hay solo una página
+    if (totalPages <= 1) {
+        container.innerHTML = `<small class="text-muted">Mostrando ${totalItems} solicitudes</small>`;
+        return;
     }
     
-    // Validación manual para navegadores antiguos
-    let isValid = true;
+    // Crear elementos de paginación
+    const paginationEl = document.createElement('div');
+    paginationEl.className = 'd-flex justify-content-between align-items-center w-100';
     
-    // Validar campos requeridos
-    form.querySelectorAll('[required]').forEach(input => {
-        if (!input.value.trim()) {
-            isValid = false;
-            input.classList.add('is-invalid');
-        } else {
-            input.classList.remove('is-invalid');
+    // Información de página
+    const infoEl = document.createElement('small');
+    infoEl.className = 'text-muted';
+    
+    const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+    const end = Math.min(currentPage * ITEMS_PER_PAGE, totalItems);
+    infoEl.textContent = `Mostrando ${start}-${end} de ${totalItems} solicitudes`;
+    
+    // Controles de navegación
+    const navEl = document.createElement('div');
+    navEl.className = 'btn-group btn-group-sm';
+    
+    // Botón anterior
+    const prevBtn = document.createElement('button');
+    prevBtn.type = 'button';
+    prevBtn.className = 'btn btn-outline-secondary';
+    prevBtn.disabled = currentPage === 1;
+    prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevBtn.addEventListener('click', () => {
+        if (currentPage > 1) {
+            onPageChange(currentPage - 1, panelName);
         }
     });
     
-    return isValid;
-}
-
-// Función para copiar texto al portapapeles
-function copyToClipboard(text) {
-    // Método moderno
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        return navigator.clipboard.writeText(text)
-            .then(() => true)
-            .catch(() => {
-                // Fallback a método antiguo si falla
-                return fallbackCopyToClipboard(text);
-            });
+    // Botón siguiente
+    const nextBtn = document.createElement('button');
+    nextBtn.type = 'button';
+    nextBtn.className = 'btn btn-outline-secondary';
+    nextBtn.disabled = currentPage === totalPages;
+    nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextBtn.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            onPageChange(currentPage + 1, panelName);
+        }
+    });
+    
+    // Crear selector de página para saltos directos
+    const pageSelector = document.createElement('select');
+    pageSelector.className = 'form-select form-select-sm mx-2';
+    pageSelector.style.width = 'auto';
+    
+    for (let i = 1; i <= totalPages; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = `Página ${i}`;
+        option.selected = i === currentPage;
+        pageSelector.appendChild(option);
     }
     
-    // Método antiguo como fallback
-    return Promise.resolve(fallbackCopyToClipboard(text));
+    pageSelector.addEventListener('change', (e) => {
+        onPageChange(parseInt(e.target.value), panelName);
+    });
+    
+    // Añadir elementos al contenedor
+    navEl.appendChild(prevBtn);
+    navEl.appendChild(pageSelector);
+    navEl.appendChild(nextBtn);
+    
+    paginationEl.appendChild(infoEl);
+    paginationEl.appendChild(navEl);
+    
+    container.appendChild(paginationEl);
 }
 
-// Método antiguo para copiar
-function fallbackCopyToClipboard(text) {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
+// Paginar y filtrar solicitudes
+function paginateAndFilterItems(items, currentPage, filterTerm = '', filterStatus = 'all') {
+    // Ordenar por fecha (más recientes primero)
+    let filteredItems = [...items].sort((a, b) => {
+        return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
+    });
     
-    // Hacer el textarea invisible
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    
-    try {
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textArea);
-        return successful;
-    } catch (err) {
-        document.body.removeChild(textArea);
-        return false;
+    // Aplicar filtro de texto si existe
+    if (filterTerm) {
+        const term = filterTerm.toLowerCase();
+        filteredItems = filteredItems.filter(item => {
+            return (
+                (item.id && item.id.toLowerCase().includes(term)) ||
+                (item.notaVenta && item.notaVenta.toLowerCase().includes(term)) ||
+                (item.fechaSolicitud && item.fechaSolicitud.includes(term)) ||
+                (item.estado && item.estado.toLowerCase().includes(term)) ||
+                (item.observaciones && item.observaciones.toLowerCase().includes(term)) ||
+                // Buscar en productos
+                (item.items && item.items.some(prod => 
+                    prod.producto && prod.producto.toLowerCase().includes(term)
+                ))
+            );
+        });
     }
-}
-
-// Detección de dispositivo móvil
-function isMobileDevice() {
-    return (window.innerWidth <= 768) || 
-           (navigator.userAgent.match(/Android/i) ||
-            navigator.userAgent.match(/webOS/i) ||
-            navigator.userAgent.match(/iPhone/i) ||
-            navigator.userAgent.match(/iPad/i) ||
-            navigator.userAgent.match(/iPod/i) ||
-            navigator.userAgent.match(/BlackBerry/i) ||
-            navigator.userAgent.match(/Windows Phone/i));
+    
+    // Aplicar filtro por estado
+    if (filterStatus !== 'all') {
+        filteredItems = filteredItems.filter(item => {
+            switch (filterStatus) {
+                case 'pendientes':
+                    return item.estado === 'Solicitud enviada por bodega';
+                case 'fabricacion':
+                    return item.estado === 'En fabricación';
+                case 'entregadas':
+                    return item.estado === 'Entregado';
+                default:
+                    return true;
+            }
+        });
+    }
+    
+    // Calcular total de ítems filtrados
+    const totalFilteredItems = filteredItems.length;
+    
+    // Obtener ítems de la página actual
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedItems = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    
+    return {
+        items: paginatedItems,
+        totalItems: totalFilteredItems
+    };
 }
