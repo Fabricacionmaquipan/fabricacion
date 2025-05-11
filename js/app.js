@@ -156,6 +156,24 @@ function setupEventListeners() {
     }
 }
 
+// Función global para manejar cambios de página en cualquier panel
+function handlePageChange(newPage, panelName) {
+    switch (panelName) {
+        case 'bodega':
+            currentPageBodega = newPage;
+            cargarDatosBodega();
+            break;
+        case 'fabricacion':
+            currentPageFabricacion = newPage;
+            cargarDatosFabricacion();
+            break;
+        case 'admin':
+            currentPageAdmin = newPage;
+            cargarDatosAdmin();
+            break;
+    }
+}
+
 // Manejar el envío de solicitud incluyendo información del usuario
 function handleNuevaSolicitudConUsuario(e, user) {
     // Obtener valores del formulario
@@ -252,6 +270,11 @@ function handleNuevaSolicitudConUsuario(e, user) {
                 
                 // Restablecer la fecha actual
                 setFechaActual();
+                
+                // Ir a la primera página para ver la solicitud recién creada
+                if (typeof currentPageBodega !== 'undefined') {
+                    currentPageBodega = 1;
+                }
                 
                 mostrarAlerta('Solicitud creada correctamente.', 'success');
                 ocultarSincronizacion();
@@ -385,3 +408,6 @@ function initAuthSystem() {
 
 // Llamar a la inicialización del sistema de autenticación después del DOMContentLoaded
 window.addEventListener('DOMContentLoaded', initAuthSystem);
+
+// Hacer global la función de manejo de cambio de página
+window.handlePageChange = handlePageChange;
