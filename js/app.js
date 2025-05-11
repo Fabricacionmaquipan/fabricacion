@@ -301,6 +301,7 @@ function handleNuevaSolicitudConUsuario(e, user) {
 }
 
 // Manejar la actualización de estado incluyendo información del usuario actual
+// Manejar la actualización de estado incluyendo información del usuario actual
 function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
@@ -308,12 +309,16 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
         try {
             mostrarSincronizacion('Actualizando estado...');
             
-            // Verificar que el user tenga un id antes de agregarlo al historial
-            if (!user || !user.id) {
-                console.error("Error: Usuario no definido o sin ID");
-                mostrarAlerta('Error al actualizar: usuario no válido', 'danger');
-                ocultarSincronizacion();
-                return;
+            // Si no hay un user o no tiene id, creamos uno básico
+            if (!user) {
+                console.warn("Usuario no definido, usando usuario de respaldo");
+                user = {
+                    id: 'sistema_' + new Date().getTime(),
+                    displayName: 'Sistema'
+                };
+            } else if (!user.id) {
+                console.warn("Usuario sin ID, añadiendo ID provisional");
+                user.id = 'user_' + new Date().getTime();
             }
             
             // Crear una copia de la solicitud para actualizar
@@ -329,8 +334,10 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                 estado: nuevoEstado,
                 observaciones: observaciones,
                 usuario: user.displayName || 'Usuario del sistema',
-                userId: user.id // Ahora nos aseguramos que siempre haya un user.id
+                userId: user.id
             });
+            
+            console.log("Guardando actualización:", solicitudActualizada);
             
             // Guardar en Firebase
             solicitudesRef.child(solicitudId).update(solicitudActualizada)
@@ -344,12 +351,12 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                 })
                 .catch(error => {
                     console.error('Error al actualizar el estado:', error);
-                    mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
+                    mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
                     ocultarSincronizacion();
                 });
         } catch (error) {
             console.error('Error al actualizar el estado:', error);
-            mostrarAlerta('Error al actualizar el estado. Por favor, inténtalo de nuevo.', 'danger');
+            mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
             ocultarSincronizacion();
         }
     } else {
