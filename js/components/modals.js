@@ -23,6 +23,18 @@ function showDetalleSolicitud(solicitudId) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
+        // Limpiar cualquier modal o backdrop existente que pueda estar causando problemas
+        const existingBackdrop = document.querySelector('.modal-backdrop');
+        if (existingBackdrop) {
+            existingBackdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
+        // Limpiar el contenido anterior del modal
+        detalleModalBody.innerHTML = '';
+        
         // Llenar el modal con los detalles
         detalleModalBody.innerHTML = `
             <div class="card status-card mb-3 ${getStatusCardClass(solicitud.estado)}">
@@ -153,9 +165,31 @@ function showDetalleSolicitud(solicitudId) {
         `;
         detalleModalBody.appendChild(style);
         
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(detalleModal);
-        modal.show();
+        // Asegurarse de que no hay una instancia previa del modal
+        let modalInstance = bootstrap.Modal.getInstance(detalleModal);
+        if (modalInstance) {
+            modalInstance.dispose();
+        }
+        
+        // Inicializar y mostrar el modal con opciones específicas
+        modalInstance = new bootstrap.Modal(detalleModal, {
+            backdrop: 'static',  // Evita cerrar al hacer clic fuera
+            keyboard: true       // Permite cerrar con Esc
+        });
+        
+        // Agregar evento para limpiar correctamente al cerrar
+        detalleModal.addEventListener('hidden.bs.modal', function() {
+            // Limpiar cualquier backdrop que haya quedado
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, { once: true }); // El evento se elimina después de ejecutarse una vez
+        
+        modalInstance.show();
     } else {
         mostrarAlerta('No se encontró la solicitud.', 'danger');
     }
@@ -181,6 +215,15 @@ function showActualizarEstadoModal(solicitudId) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
+        // Limpiar cualquier modal o backdrop existente
+        const existingBackdrop = document.querySelector('.modal-backdrop');
+        if (existingBackdrop) {
+            existingBackdrop.remove();
+        }
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        
         // No hacemos verificación de usuario aquí para permitir mostrar el modal
         // La verificación se hará cuando se intente guardar los cambios
         
@@ -203,9 +246,31 @@ function showActualizarEstadoModal(solicitudId) {
             modalTitle.innerHTML = `<i class="fas fa-edit me-2"></i>Actualizar Estado <small class="text-muted">(Nota: ${solicitud.notaVenta})</small>`;
         }
         
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(actualizarEstadoModal);
-        modal.show();
+        // Asegurarse de que no hay una instancia previa del modal
+        let modalInstance = bootstrap.Modal.getInstance(actualizarEstadoModal);
+        if (modalInstance) {
+            modalInstance.dispose();
+        }
+        
+        // Inicializar y mostrar el modal con opciones específicas
+        modalInstance = new bootstrap.Modal(actualizarEstadoModal, {
+            backdrop: true,
+            keyboard: true
+        });
+        
+        // Agregar evento para limpiar correctamente al cerrar
+        actualizarEstadoModal.addEventListener('hidden.bs.modal', function() {
+            // Limpiar cualquier backdrop que haya quedado
+            const backdrop = document.querySelector('.modal-backdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+        }, { once: true });
+        
+        modalInstance.show();
         
         // Focus en el selector de estado
         setTimeout(() => {
@@ -283,6 +348,17 @@ function handleActualizarEstado(e) {
                     // Cerrar el modal
                     const modal = bootstrap.Modal.getInstance(actualizarEstadoModal);
                     if (modal) modal.hide();
+                    
+                    // Limpiar backdrop manualmente
+                    setTimeout(() => {
+                        const backdrop = document.querySelector('.modal-backdrop');
+                        if (backdrop) {
+                            backdrop.remove();
+                        }
+                        document.body.classList.remove('modal-open');
+                        document.body.style.overflow = '';
+                        document.body.style.paddingRight = '';
+                    }, 300);
                     
                     mostrarAlerta('Estado actualizado correctamente.', 'success');
                     ocultarSincronizacion();
