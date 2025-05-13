@@ -1,4 +1,4 @@
-// Funciones específicas del panel de bodega
+// Versión actualizada de bodega.js
 
 // Elementos DOM de Bodega
 const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
@@ -107,6 +107,9 @@ function setupBodegaListeners() {
     
     // Configurar los botones de detalle y acción
     setupBodegaButtonListeners();
+    
+    // Actualizar encabezado de la tabla para incluir nuevas columnas
+    setTimeout(actualizarEncabezadoTablaBodega, 1000);
 }
 
 // Configurar listeners específicos para los botones de acción en la tabla
@@ -141,7 +144,7 @@ function setupBodegaButtonListeners() {
     }
 }
 
-// Cargar datos para el panel de Bodega
+// FUNCIÓN MODIFICADA: Cargar datos para el panel de Bodega
 function cargarDatosBodega() {
     if (!tablaSolicitudesBodega) return;
     
@@ -150,7 +153,7 @@ function cargarDatosBodega() {
     if (solicitudes.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-4">
+                <td colspan="6" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No hay solicitudes registradas</p>
@@ -179,7 +182,7 @@ function cargarDatosBodega() {
     if (solicitudesPaginadas.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="5" class="text-center py-4">
+                <td colspan="6" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No se encontraron solicitudes</p>
@@ -207,6 +210,7 @@ function cargarDatosBodega() {
         tr.innerHTML = `
             <td data-label="ID">${idCorto}</td>
             <td data-label="Nota Venta">${solicitud.notaVenta}</td>
+            <td data-label="Cliente">${solicitud.cliente || 'No especificado'}</td>
             <td data-label="Fecha">${formatDate(solicitud.fechaSolicitud)}</td>
             <td data-label="Estado">
                 <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
@@ -220,10 +224,24 @@ function cargarDatosBodega() {
         
         tablaSolicitudesBodega.appendChild(tr);
     });
+}
+
+// NUEVA FUNCIÓN: Actualizar encabezado de la tabla de solicitudes en el panel de bodega
+function actualizarEncabezadoTablaBodega() {
+    // Buscar la tabla
+    const tablaBodega = document.querySelector('#bodega-panel table thead tr');
     
-    // Refrescar listeners después de cargar datos
-    // No es necesario llamar a setupBodegaButtonListeners() aquí porque 
-    // usamos delegación de eventos en la tabla misma
+    if (tablaBodega) {
+        // Actualizar encabezados
+        tablaBodega.innerHTML = `
+            <th>ID</th>
+            <th>Nota Venta</th>
+            <th>Cliente</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+        `;
+    }
 }
 
 // Actualizar controles de paginación para bodega
@@ -245,7 +263,7 @@ function handlePageChange(newPage, panelName) {
     }
 }
 
-// Manejar el envío del formulario de nueva solicitud
+// FUNCIÓN MODIFICADA: Manejar el envío del formulario de nueva solicitud
 async function handleNuevaSolicitud(e) {
     e.preventDefault();
     
@@ -256,20 +274,26 @@ async function handleNuevaSolicitud(e) {
     
     const notaVenta = document.getElementById('nota-venta').value;
     const fechaSolicitud = document.getElementById('fecha-solicitud').value;
+    const cliente = document.getElementById('cliente').value;
+    const local = document.getElementById('local').value;
     
-    // Obtener productos y cantidades
+    // Obtener productos, SKUs y cantidades
     const productos = [];
+    const skus = [];
     const cantidades = [];
     
     const productosInputs = document.querySelectorAll('input[name="producto[]"]');
+    const skuInputs = document.querySelectorAll('input[name="sku[]"]');
     const cantidadesInputs = document.querySelectorAll('input[name="cantidad[]"]');
     
     for (let i = 0; i < productosInputs.length; i++) {
         const producto = productosInputs[i].value.trim();
+        const sku = skuInputs[i] ? skuInputs[i].value.trim() : '';
         const cantidad = parseInt(cantidadesInputs[i].value);
         
         if (producto && !isNaN(cantidad) && cantidad > 0) {
             productos.push(producto);
+            skus.push(sku);
             cantidades.push(cantidad);
         }
     }
@@ -285,6 +309,8 @@ async function handleNuevaSolicitud(e) {
         id: Date.now().toString(),
         notaVenta: notaVenta,
         fechaSolicitud: fechaSolicitud,
+        cliente: cliente,
+        local: local,
         estado: 'Solicitud enviada por bodega',
         observaciones: '',
         items: [],
@@ -302,6 +328,7 @@ async function handleNuevaSolicitud(e) {
     for (let i = 0; i < productos.length; i++) {
         nuevaSolicitud.items.push({
             producto: productos[i],
+            sku: skus[i],
             cantidad: cantidades[i]
         });
     }
@@ -321,8 +348,10 @@ async function handleNuevaSolicitud(e) {
         
         // Restablecer el primer item
         const firstProductInput = document.querySelector('input[name="producto[]"]');
+        const firstSkuInput = document.querySelector('input[name="sku[]"]');
         const firstCantidadInput = document.querySelector('input[name="cantidad[]"]');
         if (firstProductInput) firstProductInput.value = '';
+        if (firstSkuInput) firstSkuInput.value = '';
         if (firstCantidadInput) firstCantidadInput.value = '';
         
         // Restablecer la fecha actual para la próxima solicitud
@@ -350,16 +379,19 @@ async function handleNuevaSolicitud(e) {
     }
 }
 
-// Agregar un nuevo item al formulario
+// FUNCIÓN MODIFICADA: Agregar un nuevo item al formulario
 function addItem() {
     const newRow = document.createElement('div');
     newRow.className = 'item-row';
     newRow.innerHTML = `
         <div class="row g-2 align-items-center">
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
             </div>
-            <div class="col-md-4">
+            <div class="col-md-3">
+                <input type="text" class="form-control" placeholder="SKU (opcional)" name="sku[]">
+            </div>
+            <div class="col-md-3">
                 <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
             </div>
             <div class="col-md-2">
