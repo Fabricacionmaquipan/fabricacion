@@ -107,11 +107,14 @@ function setupFabricacionButtonListeners() {
 
 // Cargar datos para el panel de Fabricación
 function cargarDatosFabricacion() {
-    if (!tablaSolicitudesFabricacion) return;
+    if (!tablaSolicitudesFabricacion) {
+        console.error("No se encontró el elemento tabla-solicitudes-fabricacion");
+        return;
+    }
     
     tablaSolicitudesFabricacion.innerHTML = '';
     
-    if (solicitudes.length === 0) {
+    if (!solicitudes || solicitudes.length === 0) {
         tablaSolicitudesFabricacion.innerHTML = `
             <tr>
                 <td colspan="9" class="text-center py-4">
@@ -220,7 +223,52 @@ function handlePageChange(newPage, panelName) {
     }
 }
 
+// Función para verificar encabezados de tabla y actualizarlos si es necesario
+function actualizarEncabezadoTablaFabricacion() {
+    console.log("Actualizando encabezado de tabla de fabricación");
+    // Buscar la tabla
+    const tablaFabricacion = document.querySelector('#fabricacion-panel table thead tr');
+    
+    if (tablaFabricacion) {
+        // Verificar si tiene el número correcto de columnas
+        if (tablaFabricacion.children.length !== 9) {
+            console.log("Actualizando encabezados de fabricación para incluir Cliente y Local");
+            // Actualizar encabezados
+            tablaFabricacion.innerHTML = `
+                <th>ID</th>
+                <th>Nota Venta</th>
+                <th>Cliente</th>
+                <th>Local</th>
+                <th>Fecha</th>
+                <th>Detalle</th>
+                <th>Estado</th>
+                <th>Observaciones</th>
+                <th>Acciones</th>
+            `;
+        }
+    } else {
+        console.warn("No se encontró el encabezado de tabla de fabricación");
+    }
+}
+
+// Función de inicialización para fabricación
+function initFabricacion() {
+    console.log("Inicializando módulo de fabricación");
+    // Configurar listeners
+    setupFabricacionListeners();
+    // Actualizar encabezado de la tabla
+    setTimeout(actualizarEncabezadoTablaFabricacion, 500);
+}
+
 // Asegurarse de que los listeners estén configurados al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
-    setupFabricacionButtonListeners();
+    console.log("DOM cargado, inicializando fabricación");
+    initFabricacion();
 });
+
+// Exponer funciones globalmente para que puedan llamarse desde otros scripts
+window.fabricacion = {
+    cargarDatosFabricacion,
+    actualizarEncabezadoTablaFabricacion,
+    setupFabricacionListeners
+};
