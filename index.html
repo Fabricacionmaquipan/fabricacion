@@ -693,37 +693,45 @@
     </div>
 
     <!-- Modal para actualizar estado -->
-    <div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Actualizar Estado</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="actualizar-estado-form">
-                        <input type="hidden" id="solicitud-id">
-                        <div class="mb-3">
-                            <label for="nuevo-estado" class="form-label">Estado</label>
-                            <select class="form-select" id="nuevo-estado" required>
-                                <option value="Solicitud enviada por bodega">Solicitud enviada por bodega</option>
-                                <option value="En fabricación">En fabricación</option>
-                                <option value="Entregado">Entregado</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label for="observaciones" class="form-label">Observaciones</label>
-                            <textarea class="form-control" id="observaciones" rows="3" placeholder="Ingrese observaciones sobre este cambio de estado"></textarea>
-                        </div>
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                        </div>
-                    </form>
-                </div>
+<div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Actualizar Estado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="actualizar-estado-form">
+                    <input type="hidden" id="solicitud-id">
+                    <div class="mb-3">
+                        <label for="nuevo-estado" class="form-label">Estado</label>
+                        <select class="form-select" id="nuevo-estado" required>
+                            <option value="Solicitud enviada por bodega">Solicitud enviada por bodega</option>
+                            <option value="En fabricación">En fabricación</option>
+                            <option value="Entregado">Entregado</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Campo de fecha de entrega (inicialmente oculto) -->
+                    <div class="mb-3" id="fecha-entrega-container" style="display: none;">
+                        <label for="fecha-entrega" class="form-label">Fecha de Entrega</label>
+                        <input type="date" class="form-control" id="fecha-entrega">
+                        <small class="text-muted">Establezca la fecha de entrega para esta solicitud</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observaciones" class="form-label">Observaciones</label>
+                        <textarea class="form-control" id="observaciones" rows="3" placeholder="Ingrese observaciones sobre este cambio de estado"></textarea>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
+</div>
     
     <!-- Modal para gestión de usuarios (nueva funcionalidad) -->
     <div class="modal fade" id="usuario-modal" tabindex="-1">
