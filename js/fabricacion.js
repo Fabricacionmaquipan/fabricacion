@@ -114,7 +114,7 @@ function cargarDatosFabricacion() {
     if (solicitudes.length === 0) {
         tablaSolicitudesFabricacion.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No hay solicitudes en el sistema</p>
@@ -142,7 +142,7 @@ function cargarDatosFabricacion() {
     if (solicitudesPaginadas.length === 0) {
         tablaSolicitudesFabricacion.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No se encontraron solicitudes</p>
@@ -165,9 +165,11 @@ function cargarDatosFabricacion() {
         }
         
         // Crear el detalle de productos
-        const detalleProductos = solicitud.items.map(item => 
-            `<div><strong>${item.producto}:</strong> ${item.cantidad}</div>`
-        ).join('');
+        const detalleProductos = solicitud.items.map(item => {
+            // Incluir SKU si está disponible
+            const skuInfo = item.sku ? `<small class="text-muted">(SKU: ${item.sku})</small> ` : '';
+            return `<div><strong>${item.producto}</strong> ${skuInfo}: ${item.cantidad}</div>`;
+        }).join('');
         
         // Crear ID corto para mejor visualización
         const idCorto = solicitud.id.substring(solicitud.id.length - 6);
@@ -175,6 +177,8 @@ function cargarDatosFabricacion() {
         tr.innerHTML = `
             <td data-label="ID">${idCorto}</td>
             <td data-label="Nota Venta">${solicitud.notaVenta}</td>
+            <td data-label="Cliente">${solicitud.cliente || 'No especificado'}</td>
+            <td data-label="Local">${solicitud.local || 'No especificado'}</td>
             <td data-label="Fecha">${formatDate(solicitud.fechaSolicitud)}</td>
             <td data-label="Detalle">${detalleProductos}</td>
             <td data-label="Estado">
@@ -216,7 +220,31 @@ function handlePageChange(newPage, panelName) {
     }
 }
 
+// Actualizar el encabezado de la tabla de fabricación
+function actualizarEncabezadoTablaFabricacion() {
+    // Buscar la tabla
+    const tablaFabricacion = document.querySelector('#fabricacion-panel table thead tr');
+    
+    if (tablaFabricacion) {
+        // Actualizar encabezados
+        tablaFabricacion.innerHTML = `
+            <th>ID</th>
+            <th>Nota Venta</th>
+            <th>Cliente</th>
+            <th>Local</th>
+            <th>Fecha</th>
+            <th>Detalle</th>
+            <th>Estado</th>
+            <th>Observaciones</th>
+            <th>Acciones</th>
+        `;
+    }
+}
+
 // Asegurarse de que los listeners estén configurados al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     setupFabricacionButtonListeners();
+    
+    // Actualizar encabezado de la tabla
+    setTimeout(actualizarEncabezadoTablaFabricacion, 1000);
 });
