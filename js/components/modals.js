@@ -239,9 +239,6 @@ function showActualizarEstadoModal(solicitudId) {
         document.body.style.overflow = '';
         document.body.style.paddingRight = '';
         
-        // No hacemos verificación de usuario aquí para permitir mostrar el modal
-        // La verificación se hará cuando se intente guardar los cambios
-        
         solicitudIdInput.value = solicitudId;
         
         // Establecer el estado actual
@@ -252,8 +249,48 @@ function showActualizarEstadoModal(solicitudId) {
             }
         }
         
+        // Manejar visibilidad del campo fecha de entrega
+        const fechaEntregaContainer = document.getElementById('fecha-entrega-container');
+        const fechaEntregaInput = document.getElementById('fecha-entrega');
+        
+        if (nuevoEstadoSelect.value === 'Entregado') {
+            fechaEntregaContainer.style.display = 'block';
+            
+            // Si ya tiene fechaEntrega, establecerla
+            if (solicitud.fechaEntrega) {
+                fechaEntregaInput.value = solicitud.fechaEntrega;
+            } else {
+                // Por defecto, establecer fecha actual
+                const hoy = new Date();
+                const fechaActual = hoy.toISOString().split('T')[0];
+                fechaEntregaInput.value = fechaActual;
+            }
+        } else {
+            fechaEntregaContainer.style.display = 'none';
+        }
+        
         // Establecer observaciones
         observacionesText.value = solicitud.observaciones || '';
+        
+        // Configurar evento para mostrar/ocultar fecha de entrega según el estado seleccionado
+        const onEstadoChange = function() {
+            if (this.value === 'Entregado') {
+                fechaEntregaContainer.style.display = 'block';
+                // Establecer fecha actual por defecto
+                if (!fechaEntregaInput.value) {
+                    const hoy = new Date();
+                    const fechaActual = hoy.toISOString().split('T')[0];
+                    fechaEntregaInput.value = fechaActual;
+                }
+            } else {
+                fechaEntregaContainer.style.display = 'none';
+            }
+        };
+        
+        // Remover listener anterior si existe (para evitar duplicados)
+        nuevoEstadoSelect.removeEventListener('change', onEstadoChange);
+        // Añadir nuevo listener
+        nuevoEstadoSelect.addEventListener('change', onEstadoChange);
         
         // Preparar el modal con info adicional
         const modalTitle = actualizarEstadoModal.querySelector('.modal-title');
@@ -300,16 +337,19 @@ function showActualizarEstadoModal(solicitudId) {
     }
 }
 
-// Manejar la actualización de estado (será sobreescrito en app.js)
+// Manejar la actualización de estado
 function handleActualizarEstado(e) {
     e.preventDefault();
     console.log("Manejando actualización de estado");
     
-    // Este método es un placeholder y será reemplazado por la versión
-    // que incluye información del usuario en app.js
     const solicitudId = solicitudIdInput.value;
     const nuevoEstado = nuevoEstadoSelect.value;
     const observaciones = observacionesText.value;
+    
+    // Obtener fecha de entrega si el estado es "Entregado"
+    const fechaEntrega = nuevoEstado === 'Entregado' 
+        ? document.getElementById('fecha-entrega').value 
+        : null;
     
     // Verificar si tenemos el usuario actual y la función de actualización
     if (typeof getCurrentUser === 'function' && typeof handleActualizarEstadoConUsuario === 'function') {
@@ -321,9 +361,9 @@ function handleActualizarEstado(e) {
                 console.warn("Usuario sin ID: se creó un ID provisional", currentUser.id);
             }
             
-            // Llamar a la función con información de usuario
+            // Llamar a la función con información de usuario y fecha de entrega
             console.log("Llamando a handleActualizarEstadoConUsuario");
-            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
+            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser, fechaEntrega);
             return;
         } else {
             mostrarAlerta('Error: Debes iniciar sesión para actualizar estados', 'warning');
@@ -346,6 +386,11 @@ function handleActualizarEstado(e) {
             solicitudActualizada.estado = nuevoEstado;
             solicitudActualizada.observaciones = observaciones;
             
+            // Añadir fecha de entrega si corresponde
+            if (nuevoEstado === 'Entregado' && fechaEntrega) {
+                solicitudActualizada.fechaEntrega = fechaEntrega;
+            }
+            
             // Crear un usuario genérico como último recurso
             const usuarioGenerico = {
                 id: 'sistema_' + new Date().getTime(),
@@ -358,7 +403,8 @@ function handleActualizarEstado(e) {
                 estado: nuevoEstado,
                 observaciones: observaciones,
                 usuario: usuarioGenerico.displayName,
-                userId: usuarioGenerico.id
+                userId: usuarioGenerico.id,
+                fechaEntrega: fechaEntrega // Añadir al historial también
             });
             
             // Guardar en Firebase
