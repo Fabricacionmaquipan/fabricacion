@@ -150,6 +150,7 @@ function setupBodegaButtonListeners() {
 }
 
 // Cargar datos para el panel de Bodega
+// Cargar datos para el panel de Bodega
 function cargarDatosBodega() {
     if (!tablaSolicitudesBodega) return;
     
@@ -158,7 +159,7 @@ function cargarDatosBodega() {
     if (solicitudes.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-4">
+                <td colspan="8" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No hay solicitudes registradas</p>
@@ -187,7 +188,7 @@ function cargarDatosBodega() {
     if (solicitudesPaginadas.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="6" class="text-center py-4">
+                <td colspan="8" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No se encontraron solicitudes</p>
@@ -212,11 +213,28 @@ function cargarDatosBodega() {
         // Crear ID corto para mejor visualización
         const idCorto = solicitud.id.substring(solicitud.id.length - 6);
         
+        // Obtener fecha de entrega
+        let fechaEntrega = 'Pendiente';
+        
+        // Buscar en el historial la fecha de entrega
+        if (solicitud.estado === 'Entregado' && solicitud.historial) {
+            // Buscar el último registro con estado "Entregado"
+            const entregaHistorial = [...solicitud.historial]
+                .reverse()
+                .find(h => h.estado === 'Entregado');
+            
+            if (entregaHistorial && entregaHistorial.fecha) {
+                fechaEntrega = formatDate(entregaHistorial.fecha);
+            }
+        }
+        
         tr.innerHTML = `
             <td data-label="ID">${idCorto}</td>
             <td data-label="Nota Venta">${solicitud.notaVenta}</td>
             <td data-label="Cliente">${solicitud.cliente || 'No especificado'}</td>
-            <td data-label="Fecha">${formatDate(solicitud.fechaSolicitud)}</td>
+            <td data-label="Local">${solicitud.local || 'No especificado'}</td>
+            <td data-label="Fecha Solicitud">${formatDate(solicitud.fechaSolicitud)}</td>
+            <td data-label="Fecha Entrega">${fechaEntrega}</td>
             <td data-label="Estado">
                 <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
             </td>
@@ -231,9 +249,8 @@ function cargarDatosBodega() {
     });
 }
 
-// Actualizar encabezado de la tabla de solicitudes en el panel de bodega
+// Agregar esta función para asegurar que el encabezado tenga los campos correctos
 function actualizarEncabezadoTablaBodega() {
-    // Buscar la tabla
     const tablaBodega = document.querySelector('#bodega-panel table thead tr');
     
     if (tablaBodega) {
@@ -242,12 +259,22 @@ function actualizarEncabezadoTablaBodega() {
             <th>ID</th>
             <th>Nota Venta</th>
             <th>Cliente</th>
-            <th>Fecha</th>
+            <th>Local</th>
+            <th>Fecha Solicitud</th>
+            <th>Fecha Entrega</th>
             <th>Estado</th>
             <th>Acciones</th>
         `;
     }
 }
+
+// Llamar a esta función al iniciar el módulo
+document.addEventListener('DOMContentLoaded', function() {
+    setupBodegaButtonListeners();
+    
+    // Actualizar encabezado de la tabla
+    setTimeout(actualizarEncabezadoTablaBodega, 500);
+});
 
 // Actualizar controles de paginación para bodega
 function updateBodegaPagination(totalItems) {
