@@ -249,48 +249,84 @@ function showActualizarEstadoModal(solicitudId) {
             }
         }
         
-        // Manejar visibilidad del campo fecha de entrega
+        // Referencias a los contenedores y campos de fechas
+        const fechaEstimadaContainer = document.getElementById('fecha-estimada-container');
+        const fechaEstimadaInput = document.getElementById('fecha-estimada');
         const fechaEntregaContainer = document.getElementById('fecha-entrega-container');
         const fechaEntregaInput = document.getElementById('fecha-entrega');
         
-        if (fechaEntregaContainer && fechaEntregaInput) {
-            // Mostrar el campo si el estado actual o seleccionado es "Entregado"
-            if (nuevoEstadoSelect.value === 'Entregado') {
-                fechaEntregaContainer.style.display = 'block';
-                
-                // Si ya tiene fechaEntrega, establecerla
-                if (solicitud.fechaEntrega) {
-                    fechaEntregaInput.value = solicitud.fechaEntrega;
-                } else {
-                    // Por defecto, establecer fecha actual
-                    const hoy = new Date();
-                    const fechaActual = hoy.toISOString().split('T')[0];
-                    fechaEntregaInput.value = fechaActual;
-                }
+        // Fecha actual formateada para usar en los campos
+        const hoy = new Date();
+        const fechaActual = hoy.toISOString().split('T')[0];
+        
+        // Manejar visibilidad y valores de campos de fechas según estado
+        if (nuevoEstadoSelect.value === 'En fabricación') {
+            // Mostrar fecha estimada
+            fechaEstimadaContainer.style.display = 'block';
+            fechaEntregaContainer.style.display = 'none';
+            
+            // Establecer fecha estimada
+            if (solicitud.fechaEstimada) {
+                fechaEstimadaInput.value = solicitud.fechaEstimada;
             } else {
-                fechaEntregaContainer.style.display = 'none';
+                // Por defecto, 5 días en el futuro
+                const fechaFutura = new Date();
+                fechaFutura.setDate(fechaFutura.getDate() + 5);
+                fechaEstimadaInput.value = fechaFutura.toISOString().split('T')[0];
+            }
+        } else if (nuevoEstadoSelect.value === 'Entregado') {
+            // Mostrar ambas fechas
+            fechaEstimadaContainer.style.display = 'block';
+            fechaEntregaContainer.style.display = 'block';
+            
+            // Establecer fecha estimada (si existe)
+            if (solicitud.fechaEstimada) {
+                fechaEstimadaInput.value = solicitud.fechaEstimada;
+            } else {
+                fechaEstimadaInput.value = fechaActual; // Hoy si no hay estimación
             }
             
-            // Configurar evento para mostrar/ocultar fecha de entrega según el estado seleccionado
-            const handleEstadoChange = function() {
-                if (this.value === 'Entregado') {
-                    fechaEntregaContainer.style.display = 'block';
-                    // Si el campo está vacío, establecer fecha actual
-                    if (!fechaEntregaInput.value) {
-                        const hoy = new Date();
-                        const fechaActual = hoy.toISOString().split('T')[0];
-                        fechaEntregaInput.value = fechaActual;
-                    }
-                } else {
-                    fechaEntregaContainer.style.display = 'none';
-                }
-            };
-            
-            // Remover listener anterior (para evitar múltiples handlers)
-            nuevoEstadoSelect.removeEventListener('change', handleEstadoChange);
-            // Añadir el listener
-            nuevoEstadoSelect.addEventListener('change', handleEstadoChange);
+            // Establecer fecha de entrega real siempre a la fecha actual (automática)
+            fechaEntregaInput.value = fechaActual;
+        } else {
+            // Ocultar ambas fechas
+            fechaEstimadaContainer.style.display = 'none';
+            fechaEntregaContainer.style.display = 'none';
         }
+        
+        // Configurar evento para mostrar/ocultar fechas según el estado seleccionado
+        const handleEstadoChange = function() {
+            if (this.value === 'En fabricación') {
+                fechaEstimadaContainer.style.display = 'block';
+                fechaEntregaContainer.style.display = 'none';
+                
+                // Si no hay fecha estimada, establecer a 5 días en el futuro
+                if (!fechaEstimadaInput.value) {
+                    const fechaFutura = new Date();
+                    fechaFutura.setDate(fechaFutura.getDate() + 5);
+                    fechaEstimadaInput.value = fechaFutura.toISOString().split('T')[0];
+                }
+            } else if (this.value === 'Entregado') {
+                fechaEstimadaContainer.style.display = 'block';
+                fechaEntregaContainer.style.display = 'block';
+                
+                // Si no hay fecha estimada, usar la actual
+                if (!fechaEstimadaInput.value) {
+                    fechaEstimadaInput.value = fechaActual;
+                }
+                
+                // Fecha de entrega siempre es la actual
+                fechaEntregaInput.value = fechaActual;
+            } else {
+                fechaEstimadaContainer.style.display = 'none';
+                fechaEntregaContainer.style.display = 'none';
+            }
+        };
+        
+        // Remover listener anterior (para evitar múltiples handlers)
+        nuevoEstadoSelect.removeEventListener('change', handleEstadoChange);
+        // Añadir el listener
+        nuevoEstadoSelect.addEventListener('change', handleEstadoChange);
         
         // Establecer observaciones
         observacionesText.value = solicitud.observaciones || '';
@@ -340,7 +376,7 @@ function showActualizarEstadoModal(solicitudId) {
     }
 }
 
-// Manejar la actualización de estado (será sobreescrito en app.js)
+// Manejar la actualización de estado
 function handleActualizarEstado(e) {
     e.preventDefault();
     console.log("Manejando actualización de estado");
@@ -349,13 +385,22 @@ function handleActualizarEstado(e) {
     const nuevoEstado = nuevoEstadoSelect.value;
     const observaciones = observacionesText.value;
     
-    // Obtener fecha de entrega si el estado es "Entregado"
+    // Obtener fechas según el estado
+    let fechaEstimada = null;
     let fechaEntrega = null;
+    
+    const fechaEstimadaInput = document.getElementById('fecha-estimada');
+    const fechaEntregaInput = document.getElementById('fecha-entrega');
+    
+    // Para fabricación, obtener fecha estimada
+    if (nuevoEstado === 'En fabricación' && fechaEstimadaInput) {
+        fechaEstimada = fechaEstimadaInput.value;
+    }
+    
+    // Para entregado, obtener ambas fechas
     if (nuevoEstado === 'Entregado') {
-        const fechaEntregaInput = document.getElementById('fecha-entrega');
-        if (fechaEntregaInput && fechaEntregaInput.value) {
-            fechaEntrega = fechaEntregaInput.value;
-        }
+        if (fechaEstimadaInput) fechaEstimada = fechaEstimadaInput.value;
+        if (fechaEntregaInput) fechaEntrega = fechaEntregaInput.value;
     }
     
     // Verificar si tenemos el usuario actual y la función de actualización
@@ -368,9 +413,17 @@ function handleActualizarEstado(e) {
                 console.warn("Usuario sin ID: se creó un ID provisional", currentUser.id);
             }
             
-            // Llamar a la función con información de usuario y fecha de entrega
-            console.log("Llamando a handleActualizarEstadoConUsuario con fecha:", fechaEntrega);
-            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser, fechaEntrega);
+            // Llamar a la función con información de usuario y fechas
+            console.log("Llamando a handleActualizarEstadoConUsuario con fechas:", 
+                        {estimada: fechaEstimada, entrega: fechaEntrega});
+            handleActualizarEstadoConUsuario(
+                solicitudId, 
+                nuevoEstado, 
+                observaciones, 
+                currentUser, 
+                fechaEstimada, 
+                fechaEntrega
+            );
             return;
         } else {
             mostrarAlerta('Error: Debes iniciar sesión para actualizar estados', 'warning');
@@ -393,9 +446,12 @@ function handleActualizarEstado(e) {
             solicitudActualizada.estado = nuevoEstado;
             solicitudActualizada.observaciones = observaciones;
             
-            // Añadir fecha de entrega si corresponde
-            if (nuevoEstado === 'Entregado' && fechaEntrega) {
-                solicitudActualizada.fechaEntrega = fechaEntrega;
+            // Actualizar fechas según estado
+            if (nuevoEstado === 'En fabricación') {
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+            } else if (nuevoEstado === 'Entregado') {
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+                if (fechaEntrega) solicitudActualizada.fechaEntrega = fechaEntrega;
             }
             
             // Crear un usuario genérico como último recurso
@@ -411,7 +467,8 @@ function handleActualizarEstado(e) {
                 observaciones: observaciones,
                 usuario: usuarioGenerico.displayName,
                 userId: usuarioGenerico.id,
-                fechaEntrega: fechaEntrega // Añadir al historial también
+                fechaEstimada: fechaEstimada,
+                fechaEntrega: fechaEntrega
             });
             
             // Guardar en Firebase
