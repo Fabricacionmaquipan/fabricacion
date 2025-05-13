@@ -693,6 +693,7 @@
     </div>
 
     <!-- Modal para actualizar estado -->
+<!-- Modal para actualizar estado -->
 <div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -712,11 +713,18 @@
                         </select>
                     </div>
                     
-                    <!-- Campo de fecha de entrega (inicialmente oculto) -->
+                    <!-- Campo de fecha estimada de entrega (inicialmente oculto) -->
+                    <div class="mb-3" id="fecha-estimada-container" style="display: none;">
+                        <label for="fecha-estimada" class="form-label">Fecha Estimada de Entrega</label>
+                        <input type="date" class="form-control" id="fecha-estimada">
+                        <small class="text-muted">Establezca la fecha estimada de entrega</small>
+                    </div>
+                    
+                    <!-- Campo de fecha de entrega real (inicialmente oculto y solo lectura) -->
                     <div class="mb-3" id="fecha-entrega-container" style="display: none;">
-                        <label for="fecha-entrega" class="form-label">Fecha de Entrega</label>
-                        <input type="date" class="form-control" id="fecha-entrega">
-                        <small class="text-muted">Establezca la fecha de entrega para esta solicitud</small>
+                        <label for="fecha-entrega" class="form-label">Fecha de Entrega Real</label>
+                        <input type="date" class="form-control" id="fecha-entrega" readonly>
+                        <small class="text-muted">Fecha automática de entrega real</small>
                     </div>
                     
                     <div class="mb-3">
