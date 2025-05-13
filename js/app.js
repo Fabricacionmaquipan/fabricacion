@@ -327,9 +327,13 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
             solicitudActualizada.estado = nuevoEstado;
             solicitudActualizada.observaciones = observaciones;
             
-            // Añadir fecha de entrega si corresponde
+            // Añadir o eliminar fecha de entrega según corresponda
             if (nuevoEstado === 'Entregado' && fechaEntrega) {
                 solicitudActualizada.fechaEntrega = fechaEntrega;
+                console.log("Guardando fecha de entrega:", fechaEntrega);
+            } else if (nuevoEstado !== 'Entregado' && solicitudActualizada.fechaEntrega) {
+                // Si el estado ya no es entregado, eliminamos la fecha de entrega
+                delete solicitudActualizada.fechaEntrega;
             }
             
             // Agregar al historial con información del usuario
