@@ -35,6 +35,27 @@ function showDetalleSolicitud(solicitudId) {
         // Limpiar el contenido anterior del modal
         detalleModalBody.innerHTML = '';
         
+        // Obtener fecha estimada
+        let fechaEstimada = 'No establecida';
+        if (solicitud.fechaEstimada) {
+            fechaEstimada = formatDate(solicitud.fechaEstimada);
+        }
+        
+        // Obtener fecha de entrega real
+        let fechaEntrega = 'Pendiente';
+        if (solicitud.fechaEntrega) {
+            fechaEntrega = formatDate(solicitud.fechaEntrega);
+        } else if (solicitud.estado === 'Entregado' && solicitud.historial) {
+            // Buscar en el historial si no está como propiedad directa
+            const entregaHistorial = [...solicitud.historial]
+                .reverse()
+                .find(h => h.estado === 'Entregado' && h.fechaEntrega);
+            
+            if (entregaHistorial && entregaHistorial.fechaEntrega) {
+                fechaEntrega = formatDate(entregaHistorial.fechaEntrega);
+            }
+        }
+        
         // Llenar el modal con los detalles
         detalleModalBody.innerHTML = `
             <div class="card status-card mb-3 ${getStatusCardClass(solicitud.estado)}">
