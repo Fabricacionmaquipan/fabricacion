@@ -158,7 +158,7 @@ function cargarDatosBodega() {
     if (solicitudes.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No hay solicitudes registradas</p>
@@ -187,7 +187,7 @@ function cargarDatosBodega() {
     if (solicitudesPaginadas.length === 0) {
         tablaSolicitudesBodega.innerHTML = `
             <tr>
-                <td colspan="8" class="text-center py-4">
+                <td colspan="9" class="text-center py-4">
                     <div class="d-flex flex-column align-items-center">
                         <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
                         <p class="mb-0">No se encontraron solicitudes</p>
@@ -212,7 +212,13 @@ function cargarDatosBodega() {
         // Crear ID corto para mejor visualización
         const idCorto = solicitud.id.substring(solicitud.id.length - 6);
         
-        // Obtener fecha de entrega si existe (propiedad directa o del historial)
+        // Obtener fecha estimada
+        let fechaEstimada = 'No establecida';
+        if (solicitud.fechaEstimada) {
+            fechaEstimada = formatDate(solicitud.fechaEstimada);
+        }
+        
+        // Obtener fecha de entrega real
         let fechaEntrega = 'Pendiente';
         if (solicitud.fechaEntrega) {
             fechaEntrega = formatDate(solicitud.fechaEntrega);
@@ -233,6 +239,7 @@ function cargarDatosBodega() {
             <td data-label="Cliente">${solicitud.cliente || 'No especificado'}</td>
             <td data-label="Local">${solicitud.local || 'No especificado'}</td>
             <td data-label="Fecha Solicitud">${formatDate(solicitud.fechaSolicitud)}</td>
+            <td data-label="Fecha Estimada">${fechaEstimada}</td>
             <td data-label="Fecha Entrega">${fechaEntrega}</td>
             <td data-label="Estado">
                 <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
@@ -248,7 +255,7 @@ function cargarDatosBodega() {
     });
 }
 
-// Agregar esta función para asegurar que el encabezado tenga los campos correctos
+// Actualizar encabezado para incluir ambas fechas
 function actualizarEncabezadoTablaBodega() {
     const tablaBodega = document.querySelector('#bodega-panel table thead tr');
     
@@ -260,6 +267,7 @@ function actualizarEncabezadoTablaBodega() {
             <th>Cliente</th>
             <th>Local</th>
             <th>Fecha Solicitud</th>
+            <th>Fecha Estimada</th>
             <th>Fecha Entrega</th>
             <th>Estado</th>
             <th>Acciones</th>
