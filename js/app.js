@@ -301,7 +301,7 @@ function handleNuevaSolicitudConUsuario(e, user) {
 }
 
 // Manejar la actualización de estado incluyendo información del usuario actual
-function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEntrega = null) {
+function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEstimada = null, fechaEntrega = null) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
@@ -327,13 +327,24 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
             solicitudActualizada.estado = nuevoEstado;
             solicitudActualizada.observaciones = observaciones;
             
-            // Añadir o eliminar fecha de entrega según corresponda
-            if (nuevoEstado === 'Entregado' && fechaEntrega) {
-                solicitudActualizada.fechaEntrega = fechaEntrega;
-                console.log("Guardando fecha de entrega:", fechaEntrega);
-            } else if (nuevoEstado !== 'Entregado' && solicitudActualizada.fechaEntrega) {
-                // Si el estado ya no es entregado, eliminamos la fecha de entrega
-                delete solicitudActualizada.fechaEntrega;
+            // Actualizar fechas según estado
+            if (nuevoEstado === 'En fabricación') {
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+                
+                // Limpiar fecha de entrega si existe
+                if (solicitudActualizada.fechaEntrega) delete solicitudActualizada.fechaEntrega;
+            } 
+            else if (nuevoEstado === 'Entregado') {
+                // Mantener la fecha estimada si está definida
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+                
+                // Fecha de entrega siempre se establece para estado Entregado
+                solicitudActualizada.fechaEntrega = fechaEntrega || new Date().toISOString().split('T')[0];
+            }
+            else {
+                // Si cambia a otro estado, eliminar ambas fechas
+                if (solicitudActualizada.fechaEstimada) delete solicitudActualizada.fechaEstimada;
+                if (solicitudActualizada.fechaEntrega) delete solicitudActualizada.fechaEntrega;
             }
             
             // Agregar al historial con información del usuario
@@ -343,7 +354,8 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                 observaciones: observaciones,
                 usuario: user.displayName || 'Usuario del sistema',
                 userId: user.id,
-                fechaEntrega: fechaEntrega // Añadir al historial también
+                fechaEstimada: fechaEstimada,
+                fechaEntrega: fechaEntrega
             });
             
             console.log("Guardando actualización:", solicitudActualizada);
