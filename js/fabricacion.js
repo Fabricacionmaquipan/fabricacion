@@ -220,31 +220,7 @@ function handlePageChange(newPage, panelName) {
     }
 }
 
-// Actualizar el encabezado de la tabla de fabricación
-function actualizarEncabezadoTablaFabricacion() {
-    // Buscar la tabla
-    const tablaFabricacion = document.querySelector('#fabricacion-panel table thead tr');
-    
-    if (tablaFabricacion) {
-        // Actualizar encabezados
-        tablaFabricacion.innerHTML = `
-            <th>ID</th>
-            <th>Nota Venta</th>
-            <th>Cliente</th>
-            <th>Local</th>
-            <th>Fecha</th>
-            <th>Detalle</th>
-            <th>Estado</th>
-            <th>Observaciones</th>
-            <th>Acciones</th>
-        `;
-    }
-}
-
 // Asegurarse de que los listeners estén configurados al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
     setupFabricacionButtonListeners();
-    
-    // Actualizar encabezado de la tabla
-    setTimeout(actualizarEncabezadoTablaFabricacion, 1000);
 });
