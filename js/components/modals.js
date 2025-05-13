@@ -52,6 +52,19 @@ function showDetalleSolicitud(solicitudId) {
                                 <span class="detail-value">${solicitud.notaVenta}</span>
                             </div>
                         </div>
+                        <!-- Campos Cliente y Local -->
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Cliente:</span>
+                                <span class="detail-value">${solicitud.cliente || 'No especificado'}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="detail-item">
+                                <span class="detail-label">Local:</span>
+                                <span class="detail-value">${solicitud.local || 'No especificado'}</span>
+                            </div>
+                        </div>
                         <div class="col-md-6">
                             <div class="detail-item">
                                 <span class="detail-label">Fecha de Solicitud:</span>
@@ -94,13 +107,15 @@ function showDetalleSolicitud(solicitudId) {
                         <table class="table table-sm table-striped mb-0">
                             <thead>
                                 <tr>
+                                    <th>SKU</th>
                                     <th>Producto</th>
-                                    <th style="width: 30%">Cantidad</th>
+                                    <th style="width: 20%">Cantidad</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${solicitud.items.map(item => `
                                     <tr>
+                                        <td>${item.sku || 'N/A'}</td>
                                         <td>${item.producto}</td>
                                         <td>${item.cantidad}</td>
                                     </tr>
@@ -243,7 +258,11 @@ function showActualizarEstadoModal(solicitudId) {
         // Preparar el modal con info adicional
         const modalTitle = actualizarEstadoModal.querySelector('.modal-title');
         if (modalTitle) {
-            modalTitle.innerHTML = `<i class="fas fa-edit me-2"></i>Actualizar Estado <small class="text-muted">(Nota: ${solicitud.notaVenta})</small>`;
+            // Incluir información de Cliente y Nota de Venta
+            modalTitle.innerHTML = `<i class="fas fa-edit me-2"></i>Actualizar Estado 
+                <small class="text-muted">
+                    (Nota: ${solicitud.notaVenta}${solicitud.cliente ? ` | Cliente: ${solicitud.cliente}` : ''})
+                </small>`;
         }
         
         // Asegurarse de que no hay una instancia previa del modal
