@@ -301,7 +301,7 @@ function handleNuevaSolicitudConUsuario(e, user) {
 }
 
 // Manejar la actualización de estado incluyendo información del usuario actual
-function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user) {
+function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEntrega = null) {
     const solicitud = solicitudes.find(s => s.id === solicitudId);
     
     if (solicitud) {
@@ -327,13 +327,19 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
             solicitudActualizada.estado = nuevoEstado;
             solicitudActualizada.observaciones = observaciones;
             
+            // Añadir fecha de entrega si corresponde
+            if (nuevoEstado === 'Entregado' && fechaEntrega) {
+                solicitudActualizada.fechaEntrega = fechaEntrega;
+            }
+            
             // Agregar al historial con información del usuario
             solicitudActualizada.historial.push({
                 fecha: new Date().toISOString(),
                 estado: nuevoEstado,
                 observaciones: observaciones,
                 usuario: user.displayName || 'Usuario del sistema',
-                userId: user.id
+                userId: user.id,
+                fechaEntrega: fechaEntrega // Añadir al historial también
             });
             
             console.log("Guardando actualización:", solicitudActualizada);
