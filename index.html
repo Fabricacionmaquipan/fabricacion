@@ -1,4 +1,332 @@
-<!-- Panel de Admin (Actualizado con Tabs) -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Solicitudes</title>
+    <!-- Bootstrap 5 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts - Montserrat y Roboto -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    
+    <!-- Chart.js para gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+    
+    <!-- Html2Canvas para exportación de gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    
+    <!-- Estilos CSS personalizados -->
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/estilos-dashboards.css">
+</head>
+<body>
+    <!-- Barra de navegación principal -->
+    <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand d-flex align-items-center" href="#">
+                <i class="fas fa-boxes me-2"></i>
+                <span>Sistema de Solicitudes</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item" id="user-info" style="display: none;">
+                        <span class="nav-link">
+                            <i class="fas fa-user-circle me-1"></i>
+                            <span id="user-display-name"></span>
+                            (<span id="user-role-display"></span>)
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link d-flex align-items-center" href="#" id="logout-btn" style="display: none;">
+                            <i class="fas fa-sign-out-alt me-1"></i>
+                            <span>Cerrar Sesión</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="content-wrapper">
+        <div class="container py-4">
+            <!-- Pantalla de inicio de sesión -->
+            <div id="login-screen" class="text-center">
+                <div class="login-container">
+                    <div class="login-header mb-4">
+                        <div class="app-icon mb-3">
+                            <i class="fas fa-cubes"></i>
+                        </div>
+                        <h2>Bienvenido</h2>
+                        <p class="text-muted">Inicia sesión para continuar</p>
+                    </div>
+                    
+                    <div class="login-form">
+                        <form id="login-form">
+                            <div class="mb-3">
+                                <label for="username-input" class="form-label text-start d-block">Usuario</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="username-input" placeholder="Ingresa tu usuario" required>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="password-input" class="form-label text-start d-block">Contraseña</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-lock"></i>
+                                    </span>
+                                    <input type="password" class="form-control" id="password-input" placeholder="Ingresa tu contraseña" required>
+                                    <button class="btn btn-outline-secondary toggle-password" type="button">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="role-select" class="form-label text-start d-block">Rol en el sistema</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-id-badge"></i>
+                                    </span>
+                                    <select class="form-select" id="role-select" required>
+                                        <option value="">-- Seleccionar rol --</option>
+                                        <option value="bodega">Bodega</option>
+                                        <option value="fabricacion">Fabricación</option>
+                                        <option value="admin">Administrador</option>
+                                    </select>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100" id="login-button">
+                                Ingresar <i class="fas fa-sign-in-alt ms-1"></i>
+                            </button>
+                        </form>
+                        
+                        <div class="mt-3 text-muted small">
+                            <p class="mb-0">Credenciales de prueba:</p>
+                            <div class="row text-start mt-2">
+                                <div class="col-md-4 mb-2">
+                                    <strong>Bodega:</strong><br>
+                                    Usuario: bodega1<br>
+                                    Clave: bodega123
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Fabricación:</strong><br>
+                                    Usuario: fabricacion1<br>
+                                    Clave: fabrica123
+                                </div>
+                                <div class="col-md-4 mb-2">
+                                    <strong>Administrador:</strong><br>
+                                    Usuario: admin1<br>
+                                    Clave: admin123
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Bodega -->
+            <div id="bodega-panel" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
+                    <h2 class="panel-title mb-0">
+                        <i class="fas fa-warehouse me-2"></i>Panel de Bodega
+                    </h2>
+                    
+                    <div class="d-flex gap-2 mt-2 mt-md-0">
+                        <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
+                            <i class="fas fa-plus-circle me-1"></i> Nueva Solicitud
+                        </button>
+                        <button class="btn btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#historial-bodega">
+                            <i class="fas fa-list me-1"></i> Historial
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Formulario de nueva solicitud -->
+                <div class="collapse show" id="nueva-solicitud-container">
+                    <div class="card card-form mb-4">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nueva Solicitud</h5>
+                                <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <form id="nueva-solicitud-form">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="nota-venta" class="form-label">Nota de Venta</label>
+                                        <input type="text" class="form-control" id="nota-venta" placeholder="Ingrese número de nota" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
+                                        <input type="date" class="form-control" id="fecha-solicitud" required readonly>
+                                        <small class="text-muted">Fecha establecida automáticamente</small>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <label class="form-label mb-0">Productos solicitados</label>
+                                        <button type="button" class="btn btn-sm btn-primary" id="add-item">
+                                            <i class="fas fa-plus me-1"></i> Agregar Producto
+                                        </button>
+                                    </div>
+                                    
+                                    <div class="items-container" id="items-container">
+                                        <div class="item-row">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-6">
+                                                    <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <button type="button" class="btn btn-outline-danger w-100 remove-item">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane me-1"></i> Enviar Solicitud
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Historial de solicitudes -->
+                <div class="collapse show" id="historial-bodega">
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Solicitudes</h5>
+                                <div class="d-flex gap-2">
+                                    <!-- Añadir menú desplegable para filtrar por estado -->
+                                    <div class="dropdown d-none d-md-block">
+                                        <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                            <i class="fas fa-filter me-1"></i> Todas
+                                        </button>
+                                        <ul class="dropdown-menu dropdown-menu-end">
+                                            <li><a class="dropdown-item active" href="#">Todas</a></li>
+                                            <li><a class="dropdown-item" href="#">Pendientes</a></li>
+                                            <li><a class="dropdown-item" href="#">En Fabricación</a></li>
+                                            <li><a class="dropdown-item" href="#">Entregadas</a></li>
+                                        </ul>
+                                    </div>
+                                    
+                                    <!-- Actualizar campo de búsqueda -->
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" class="form-control" placeholder="Buscar..." id="buscar-solicitud-bodega">
+                                        <button class="btn btn-outline-secondary" type="button">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nota Venta</th>
+                                        <th>Fecha</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-solicitudes-bodega">
+                                    <!-- Se llenará con JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="card-footer p-2">
+                            <!-- Aquí se insertarán los controles de paginación -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Fabricación -->
+            <div id="fabricacion-panel" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2 class="panel-title mb-0">
+                        <i class="fas fa-industry me-2"></i>Panel de Fabricación
+                    </h2>
+                    
+                    <div class="d-flex gap-2">
+                        <div class="dropdown">
+                            <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-filter me-1"></i> Todas
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item active" href="#">Todas</a></li>
+                                <li><a class="dropdown-item" href="#">Pendientes</a></li>
+                                <li><a class="dropdown-item" href="#">En Fabricación</a></li>
+                                <li><a class="dropdown-item" href="#">Entregadas</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <input type="text" class="form-control" placeholder="Buscar...">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nota Venta</th>
+                                    <th>Fecha</th>
+                                    <th>Detalle</th>
+                                    <th>Estado</th>
+                                    <th>Observaciones</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-solicitudes-fabricacion">
+                                <!-- Se llenará con JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="card-footer p-2">
+                        <!-- Aquí se insertarán los controles de paginación -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panel de Admin (Actualizado con Tabs) -->
             <div id="admin-panel" style="display: none;">
                 <h2 class="panel-title mb-3">
                     <i class="fas fa-user-shield me-2"></i>Panel de Administración
@@ -13,11 +341,6 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="usuarios-tab" data-bs-toggle="tab" data-bs-target="#usuarios-content" type="button" role="tab" aria-controls="usuarios-content" aria-selected="false">
                             <i class="fas fa-users-cog me-1"></i> Usuarios
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="productos-tab" data-bs-toggle="tab" data-bs-target="#productos-content" type="button" role="tab" aria-controls="productos-content" aria-selected="false">
-                            <i class="fas fa-boxes me-1"></i> Productos
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -130,53 +453,7 @@
                         </div>
                     </div>
                     
-                    <!-- NUEVA PESTAÑA: Tab de Productos -->
-                    <div class="tab-pane fade" id="productos-content" role="tabpanel" aria-labelledby="productos-tab">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="mb-0">Gestión de Productos</h5>
-                            
-                            <div class="d-flex gap-2">
-                                <button class="btn btn-outline-primary" id="btn-nuevo-producto">
-                                    <i class="fas fa-plus me-1"></i> Nuevo Producto
-                                </button>
-                                <button class="btn btn-outline-success" id="btn-importar-productos">
-                                    <i class="fas fa-file-import me-1"></i> Importar CSV
-                                </button>
-                                <button class="btn btn-outline-info" id="btn-exportar-productos">
-                                    <i class="fas fa-file-export me-1"></i> Exportar CSV
-                                </button>
-                                <div class="input-group input-group-sm" style="width: 200px;">
-                                    <input type="text" class="form-control" placeholder="Buscar..." id="buscar-producto">
-                                    <button class="btn btn-outline-secondary" type="button" id="btn-buscar-producto">
-                                        <i class="fas fa-search"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="card">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0">
-                                    <thead>
-                                        <tr>
-                                            <th>SKU</th>
-                                            <th>Nombre</th>
-                                            <th>Descripción</th>
-                                            <th>Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tabla-productos">
-                                        <!-- Se llenará con JavaScript -->
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="card-footer p-2">
-                                <!-- Aquí se insertarán los controles de paginación -->
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- EXISTENTE: Tab de Dashboard -->
+                    <!-- NUEVA SECCIÓN: Tab de Dashboard -->
                     <div class="tab-pane fade" id="dashboard-content" role="tabpanel" aria-labelledby="dashboard-tab">
                         <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard de Estadísticas</h5>
@@ -214,7 +491,7 @@
                         </div>
                     </div>
                     
-                    <!-- EXISTENTE: Tab de Reportes -->
+                    <!-- NUEVA SECCIÓN: Tab de Reportes -->
                     <div class="tab-pane fade" id="reportes-content" role="tabpanel" aria-labelledby="reportes-tab">
                         <div class="row">
                             <div class="col-md-4">
@@ -271,7 +548,7 @@
                         </div>
                     </div>
                     
-                    <!-- EXISTENTE: Tab de Auditoría -->
+                    <!-- NUEVA SECCIÓN: Tab de Auditoría -->
                     <div class="tab-pane fade" id="auditoria-content" role="tabpanel" aria-labelledby="auditoria-tab">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0"><i class="fas fa-history me-2"></i>Registro de Auditoría</h5>
@@ -429,7 +706,7 @@
         </div>
     </div>
     
-    <!-- Modal para gestión de usuarios (ya existente) -->
+    <!-- Modal para gestión de usuarios (nueva funcionalidad) -->
     <div class="modal fade" id="usuario-modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -483,91 +760,6 @@
         </div>
     </div>
 
-    <!-- Modal para gestión de productos (NUEVO) -->
-    <div class="modal fade" id="producto-modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="producto-modal-title"><i class="fas fa-box me-2"></i>Nuevo Producto</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="producto-form">
-                        <input type="hidden" id="producto-id">
-                        <div class="mb-3">
-                            <label for="producto-sku" class="form-label">SKU</label>
-                            <input type="text" class="form-control" id="producto-sku" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="producto-nombre" class="form-label">Nombre del Producto</label>
-                            <input type="text" class="form-control" id="producto-nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="producto-descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="producto-descripcion" rows="3"></textarea>
-                        </div>
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Guardar Producto</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para importar productos (NUEVO) -->
-    <div class="modal fade" id="importar-productos-modal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Importar Productos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <span>El archivo CSV debe tener al menos las columnas <strong>SKU</strong> y <strong>Nombre</strong>. 
-                        Puedes añadir columnas adicionales como <strong>Descripción</strong>.</span>
-                    </div>
-                    
-                    <form id="importar-productos-form">
-                        <div class="mb-3">
-                            <label for="csv-file" class="form-label">Archivo CSV</label>
-                            <input class="form-control" type="file" id="csv-file" accept=".csv">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="actualizar-existentes" checked>
-                                <label class="form-check-label" for="actualizar-existentes">
-                                    Actualizar productos existentes con el mismo SKU
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Importar</button>
-                        </div>
-                    </form>
-                    
-                    <div id="resultado-importacion" class="mt-4" style="display: none;">
-                        <h6>Resultado de la importación</h6>
-                        <div class="alert alert-success">
-                            <span id="productos-importados-count">0</span> productos importados correctamente.
-                        </div>
-                        <div id="errores-importacion" class="alert alert-danger" style="display: none;">
-                            <h6>Errores encontrados:</h6>
-                            <ul id="lista-errores-importacion">
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal para confirmar eliminación de solicitud -->
     <div class="modal fade" id="confirmar-eliminacion-modal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
@@ -623,521 +815,9 @@
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
-    <script src="js/productos.js"></script> <!-- NUEVO: Gestor de productos -->
     <script src="js/bodega.js"></script>
     <script src="js/fabricacion.js"></script>
     <script src="js/admin.js"></script>
-    <script src="js/admin-productos.js"></script> <!-- NUEVO: Admin de productos -->
-    <script src="js/components/modals.js"></script>
-    <script src="js/components/ui.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/auditoria.js"></script>
-    <script src="js/reportes.js"></script>
-    <script src="js/app.js"></script>
-    
-    <!-- Script para toggle de contraseña y funciones adicionales -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM cargado, inicializando eventos...");
-            
-            // Toggle para mostrar/ocultar contraseña
-            const toggleButtons = document.querySelectorAll('.toggle-password');
-            
-            toggleButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    const input = this.previousElementSibling;
-                    const icon = this.querySelector('i');
-                    
-                    // Cambiar tipo de input
-                    if (input.type === 'password') {
-                        input.type = 'text';
-                        icon.classList.remove('fa-eye');
-                        icon.classList.add('fa-eye-slash');
-                    } else {
-                        input.type = 'password';
-                        icon.classList.remove('fa-eye-slash');
-                        icon.classList.add('fa-eye');
-                    }
-                });
-            });
-            
-            // Gestión de usuarios (ya existente)
-            const btnNuevoUsuario = document.getElementById('btn-nuevo-usuario');
-            if (btnNuevoUsuario) {
-                btnNuevoUsuario.addEventListener('click', function() {
-                    // Limpiar formulario
-                    document.getElementById('usuario-form').reset();
-                    document.getElementById('usuario-id').value = '';
-                    document.getElementById('usuario-modal-title').innerHTML = '<i class="fas fa-user-plus me-2"></i>Nuevo Usuario';
-                    
-                    // Mostrar modal
-                    const modal = new bootstrap.Modal(document.getElementById('usuario-modal'));
-                    modal.show();
-                });
-            }
-            
-            // Inicializar nuevos componentes
-            if (typeof window.dashboard !== 'undefined' && typeof window.dashboard.init === 'function') {
-                window.dashboard.init();
-            }
-            
-            if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.init === 'function') {
-                window.auditoria.init();
-            }
-            
-            if (typeof window.reportes !== 'undefined' && typeof window.reportes.init === 'function') {
-                window.reportes.init();
-            }
-            
-            // Función para cargar registros de auditoría
-            window.cargarRegistrosAuditoria = function() {
-                const container = document.getElementById('tabla-auditoria-container');
-                if (!container) return;
-                
-                container.innerHTML = `
-                    <div class="text-center p-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Cargando...</span>
-                        </div>
-                        <p class="mt-2">Cargando registros de auditoría...</p>
-                    </div>
-                `;
-                
-                if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                    window.auditoria.cargarRegistrosAuditoria(100).then(logs => {
-                        if (typeof window.auditoria.mostrarTablaLogs === 'function') {
-                            window.auditoria.mostrarTablaLogs(logs, container);
-                            
-                            // Actualizar información
-                            const infoEl = document.getElementById('auditoria-info');
-                            if (infoEl) infoEl.textContent = `Mostrando ${logs.length} registros`;
-                        }
-                    }).catch(error => {
-                        container.innerHTML = `
-                            <div class="alert alert-danger m-3">
-                                <i class="fas fa-exclamation-circle me-2"></i>Error al cargar registros: ${error.message}
-                            </div>
-                        `;
-                    });
-                }
-            };
-            
-            // Función para exportar logs de auditoría
-            window.exportarLogsAuditoria = function() {
-                if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                    window.auditoria.cargarRegistrosAuditoria(1000).then(logs => {
-                        if (typeof window.auditoria.exportarLogsCSV === 'function') {
-                            window.auditoria.exportarLogsCSV(logs);
-                        } else {
-                            mostrarAlerta('Función de exportación no disponible', 'warning');
-                        }
-                    }).catch(error => {
-                        mostrarAlerta(`Error al cargar registros: ${error.message}`, 'danger');
-                    });
-                }
-            };
-            
-            // Inicializar filtros de auditoría
-            const formFiltrosAuditoria = document.getElementById('form-filtros-auditoria');
-            if (formFiltrosAuditoria) {
-                formFiltrosAuditoria.addEventListener('submit', function(e) {
-                    e.preventDefault();
-                    
-                    const fechaDesde = this.querySelector('input[name="fecha_desde"]').value;
-                    const fechaHasta = this.querySelector('input[name="fecha_hasta"]').value;
-                    const usuario = this.querySelector('select[name="usuario"]').value;
-                    const tipoEvento = this.querySelector('select[name="tipo_evento"]').value;
-                    const entidad = this.querySelector('select[name="entidad"]').value;
-                    
-                    const filtros = {};
-                    if (fechaDesde) filtros.fechaDesde = fechaDesde;
-                    if (fechaHasta) filtros.fechaHasta = fechaHasta;
-                    if (usuario) filtros['usuario.id'] = usuario;
-                    if (tipoEvento) filtros.tipo = tipoEvento;
-                    if (entidad) filtros.entidad = entidad;
-                    
-                    const container = document.getElementById('tabla-auditoria-container');
-                    if (!container) return;
-                    
-                    container.innerHTML = `
-                        <div class="text-center p-5">
-                            <div class="spinner-border text-primary" role="status">
-                                <span class="visually-hidden">Cargando...</span>
-                            </div>
-                            <p class="mt-2">Filtrando registros...</p>
-                        </div>
-                    `;
-                    
-                    if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                        window.auditoria.cargarRegistrosAuditoria(100, filtros).then(logs => {
-                            if (typeof window.auditoria.mostrarTablaLogs === 'function') {
-                                window.auditoria.mostrarTablaLogs(logs, container);
-                                
-                                // Actualizar información
-                                const infoEl = document.getElementById('auditoria-info');
-                                if (infoEl) infoEl.textContent = `${logs.length} registros encontrados`;
-                                
-                                // Colapsar filtros en móviles
-                                if (window.innerWidth < 768) {
-                                    const bsCollapse = bootstrap.Collapse.getInstance(document.getElementById('filtros-auditoria'));
-                                    if (bsCollapse) bsCollapse.hide();
-                                }
-                            }
-                        }).catch(error => {
-                            container.innerHTML = `
-                                <div class="alert alert-danger m-3">
-                                    <i class="fas fa-exclamation-circle me-2"></i>Error al filtrar registros: ${error.message}
-                                </div>
-                            `;
-                        });
-                    }
-                });
-            }
-            
-            // Cargar registros de auditoría automáticamente al abrir la pestaña
-            const auditoriaTab = document.getElementById('auditoria-tab');
-            if (auditoriaTab) {
-                auditoriaTab.addEventListener('shown.bs.tab', function() {
-                    window.cargarRegistrosAuditoria();
-                });
-            }
-            
-            // Cargar el dashboard automáticamente al abrir esa pestaña
-            const dashboardTab = document.getElementById('dashboard-tab');
-            if (dashboardTab) {
-                dashboardTab.addEventListener('shown.bs.tab', function() {
-                    if (typeof window.dashboard !== 'undefined' && typeof window.dashboard.cargarEstadisticas === 'function') {
-                        window.dashboard.cargarEstadisticas();
-                    }
-                });
-            }
-            
-            // Función para cargar más registros de auditoría
-            window.cargarMasRegistros = function() {
-                const infoEl = document.getElementById('auditoria-info');
-                const currentCount = infoEl ? parseInt(infoEl.textContent.match(/\d+/)[0]) : 100;
-                const newCount = currentCount + 100;
-                
-                if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                    mostrarSincronizacion('Cargando más registros...');
-                    
-                    window.auditoria.cargarRegistrosAuditoria(newCount).then(logs => {
-                        const container = document.getElementById('tabla-auditoria-container');
-                        if (container && typeof window.auditoria.mostrarTablaLogs === 'function') {
-                            window.auditoria.mostrarTablaLogs(logs, container);
-                            
-                            // Actualizar información
-                            if (infoEl) infoEl.textContent = `Mostrando ${logs.length} registros`;
-                        }
-                        ocultarSincronizacion();
-                    }).catch(error => {
-                        mostrarAlerta(`Error al cargar más registros: ${error.message}`, 'danger');
-                        ocultarSincronizacion();
-                    });
-                }
-            };
-            
-            // Manejamos el evento submit del formulario de login directamente en el HTML
-            // para asegurarnos de que se ejecute correctamente
-            const loginForm = document.getElementById('login-form');
-            if (loginForm) {
-                console.log("Formulario de login encontrado, añadiendo listener...");
-                loginForm.addEventListener('submit', function(e) {
-                    console.log("Formulario de login enviado!");
-                    e.preventDefault();
-                    
-                    // Obtener valores del formulario
-                    const username = document.getElementById('username-input').value.trim();
-                    const password = document.getElementById('password-input').value.trim();
-                    const role = document.getElementById('role-select').value;
-                    
-                    // Validar campos
-                    if (!username || !password || !role) {
-                        alert('Todos los campos son obligatorios');
-                        return;
-                    }
-                    
-                    // Credenciales hardcodeadas para demo
-                    const credencialesValidas = {
-                        bodega: { user: 'bodega1', pass: 'bodega123' },
-                        fabricacion: { user: 'fabricacion1', pass: 'fabrica123' },
-                        admin: { user: 'admin1', pass: 'admin123' }
-                    };
-                    
-                    // Verificar credenciales según el rol
-                    if (credencialesValidas[role] && 
-                        credencialesValidas[role].user === username && 
-                        credencialesValidas[role].pass === password) {
-                        
-                        // Crear objeto de usuario autenticado
-                        const usuarioAutenticado = {
-                            id: `${role}-${Date.now()}`,
-                            username: username,
-                            role: role,
-                            displayName: role === 'bodega' ? 'Carlos Bodegas' : 
-                                         role === 'fabricacion' ? 'Fernando Fábrica' : 'Admin Sistema',
-                            lastLogin: new Date().toISOString()
-                        };
-                        
-                        // Guardar en localStorage para persistencia
-                        localStorage.setItem('usuarioSistema', JSON.stringify(usuarioAutenticado));
-                        
-                        // Actualizar UI
-                        document.getElementById('user-display-name').textContent = usuarioAutenticado.displayName;
-                        document.getElementById('user-role-display').textContent = role === 'bodega' ? 'Bodega' : 
-                                                                                   role === 'fabricacion' ? 'Fabricación' : 'Administrador';
-                        
-                        // Mostrar información de usuario y botón de logout
-                        document.getElementById('user-info').style.display = 'block';
-                        document.getElementById('logout-btn').style.display = 'block';
-                        
-                        // Ocultar login
-                        document.getElementById('login-screen').style.display = 'none';
-                        
-                        // Mostrar panel según el rol
-                        document.getElementById('bodega-panel').style.display = role === 'bodega' ? 'block' : 'none';
-                        document.getElementById('fabricacion-panel').style.display = role === 'fabricacion' ? 'block' : 'none';
-                        document.getElementById('admin-panel').style.display = role === 'admin' ? 'block' : 'none';
-                        
-                        // Inicializar panel correspondiente si es necesario
-                        if (role === 'bodega' && typeof inicializarPanelBodega === 'function') {
-                            inicializarPanelBodega();
-                        }
-                        else if (role === 'fabricacion' && typeof inicializarPanelFabricacion === 'function') {
-                            inicializarPanelFabricacion();
-                        }
-                        else if (role === 'admin' && typeof inicializarPanelAdmin === 'function') {
-                            inicializarPanelAdmin();
-                        }
-                        
-                        console.log("Inicio de sesión exitoso!");
-                        alert('Bienvenido, ' + usuarioAutenticado.displayName);
-                    } else {
-                        // Credenciales incorrectas
-                        console.log("Credenciales incorrectas");
-                        alert('Credenciales incorrectas');
-                    }
-                });
-            } else {
-                console.error("No se encontró el formulario de login!");
-            }
-            
-            // Manejar cierre de sesión
-            const logoutBtn = document.getElementById('logout-btn');
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Limpiar localStorage
-                    localStorage.removeItem('usuarioSistema');
-                    
-                    // Ocultar información de usuario y botón de logout
-                    document.getElementById('user-info').style.display = 'none';
-                    document.getElementById('logout-btn').style.display = 'none';
-                    
-                    // Ocultar todos los paneles
-                    document.getElementById('bodega-panel').style.display = 'none';
-                    document.getElementById('fabricacion-panel').style.display = 'none';
-                    document.getElementById('admin-panel').style.display = 'none';
-                    
-                    // Mostrar login
-                    document.getElementById('login-screen').style.display = 'block';
-                    
-                    // Limpiar formulario de login
-                    document.getElementById('login-form').reset();
-                    
-                    alert('Sesión cerrada correctamente');
-                });
-            }
-            
-            // Comprobar si hay sesión guardada
-            const usuarioGuardado = localStorage.getItem('usuarioSistema');
-            if (usuarioGuardado) {
-                try {
-                    const usuarioData = JSON.parse(usuarioGuardado);
-                    
-                    // Actualizar UI
-                    document.getElementById('user-display-name').textContent = usuarioData.displayName || usuarioData.username;
-                    document.getElementById('user-role-display').textContent = usuarioData.role === 'bodega' ? 'Bodega' : 
-                                                                              usuarioData.role === 'fabricacion' ? 'Fabricación' : 'Administrador';
-                    
-                    // Mostrar información de usuario y botón de logout
-                    document.getElementById('user-info').style.display = 'block';
-                    document.getElementById('logout-btn').style.display = 'block';
-                    
-                    // Ocultar login
-                    document.getElementById('login-screen').style.display = 'none';
-                    
-                    // Mostrar panel según el rol
-                    document.getElementById('bodega-panel').style.display = usuarioData.role === 'bodega' ? 'block' : 'none';
-                    document.getElementById('fabricacion-panel').style.display = usuarioData.role === 'fabricacion' ? 'block' : 'none';
-                    document.getElementById('admin-panel').style.display = usuarioData.role === 'admin' ? 'block' : 'none';
-                    
-                    // Inicializar panel correspondiente si es necesario
-                    if (usuarioData.role === 'bodega' && typeof inicializarPanelBodega === 'function') {
-                        inicializarPanelBodega();
-                    }
-                    else if (usuarioData.role === 'fabricacion' && typeof inicializarPanelFabricacion === 'function') {
-                        inicializarPanelFabricacion();
-                    }
-                    else if (usuarioData.role === 'admin' && typeof inicializarPanelAdmin === 'function') {
-                        inicializarPanelAdmin();
-                    }
-                    
-                    console.log('Sesión restaurada para:', usuarioData.displayName || usuarioData.username);
-                } catch (error) {
-                    console.error('Error al restaurar sesión:', error);
-                    localStorage.removeItem('usuarioSistema');
-                }
-            }
-        });
-    </script>
-</body>
-</html>    <!-- Modal para gestión de productos (NUEVO) -->
-    <div class="modal fade" id="producto-modal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="producto-modal-title"><i class="fas fa-box me-2"></i>Nuevo Producto</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="producto-form">
-                        <input type="hidden" id="producto-id">
-                        <div class="mb-3">
-                            <label for="producto-sku" class="form-label">SKU</label>
-                            <input type="text" class="form-control" id="producto-sku" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="producto-nombre" class="form-label">Nombre del Producto</label>
-                            <input type="text" class="form-control" id="producto-nombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label for="producto-descripcion" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="producto-descripcion" rows="3"></textarea>
-                        </div>
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Guardar Producto</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para importar productos (NUEVO) -->
-    <div class="modal fade" id="importar-productos-modal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Importar Productos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="alert alert-info">
-                        <i class="fas fa-info-circle me-2"></i>
-                        <span>El archivo CSV debe tener al menos las columnas <strong>SKU</strong> y <strong>Nombre</strong>. 
-                        Puedes añadir columnas adicionales como <strong>Descripción</strong>.</span>
-                    </div>
-                    
-                    <form id="importar-productos-form">
-                        <div class="mb-3">
-                            <label for="csv-file" class="form-label">Archivo CSV</label>
-                            <input class="form-control" type="file" id="csv-file" accept=".csv">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" id="actualizar-existentes" checked>
-                                <label class="form-check-label" for="actualizar-existentes">
-                                    Actualizar productos existentes con el mismo SKU
-                                </label>
-                            </div>
-                        </div>
-                        
-                        <div class="text-end">
-                            <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                            <button type="submit" class="btn btn-primary">Importar</button>
-                        </div>
-                    </form>
-                    
-                    <div id="resultado-importacion" class="mt-4" style="display: none;">
-                        <h6>Resultado de la importación</h6>
-                        <div class="alert alert-success">
-                            <span id="productos-importados-count">0</span> productos importados correctamente.
-                        </div>
-                        <div id="errores-importacion" class="alert alert-danger" style="display: none;">
-                            <h6>Errores encontrados:</h6>
-                            <ul id="lista-errores-importacion">
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para confirmar eliminación de solicitud -->
-    <div class="modal fade" id="confirmar-eliminacion-modal" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>Confirmar Eliminación</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>¿Estás seguro que deseas eliminar permanentemente esta solicitud?</p>
-                    <p class="mb-0">Nota de Venta: <strong id="eliminar-nota-venta"></strong></p>
-                    <p>Esta acción no se puede deshacer.</p>
-                    <input type="hidden" id="eliminar-solicitud-id">
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-danger" id="confirmar-eliminacion-btn">
-                        <i class="fas fa-trash-alt me-1"></i>Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Modal para mostrar detalles de un log de auditoría -->
-    <div class="modal fade" id="detalles-log-modal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles del Registro</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="detalles-log-modal-body">
-                    <!-- Se llenará con JavaScript -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Indicador de sincronización -->
-    <div class="sync-status" id="sync-status">
-        <div class="loading-spinner"></div>
-        <span id="sync-message">Sincronizando datos...</span>
-    </div>
-
-    <!-- Scripts de Bootstrap y otras dependencias -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Scripts de la aplicación -->
-    <script src="js/config.js"></script>
-    <script src="js/utils.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/productos.js"></script> <!-- NUEVO: Gestor de productos -->
-    <script src="js/bodega.js"></script>
-    <script src="js/fabricacion.js"></script>
-    <script src="js/admin.js"></script>
-    <script src="js/admin-productos.js"></script> <!-- NUEVO: Admin de productos -->
     <script src="js/components/modals.js"></script>
     <script src="js/components/ui.js"></script>
     <script src="js/dashboard.js"></script>
@@ -1169,7 +849,7 @@
                 });
             });
             
-            // Gestión de usuarios (ya existente)
+            // Gestión de usuarios (nueva funcionalidad)
             const btnNuevoUsuario = document.getElementById('btn-nuevo-usuario');
             if (btnNuevoUsuario) {
                 btnNuevoUsuario.addEventListener('click', function() {
