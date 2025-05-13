@@ -1,4 +1,4 @@
-// Versión actualizada de bodega.js
+// Funciones específicas del panel de bodega
 
 // Elementos DOM de Bodega
 const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
@@ -108,6 +108,11 @@ function setupBodegaListeners() {
     // Configurar los botones de detalle y acción
     setupBodegaButtonListeners();
     
+    // Configurar autocompletado de productos si el módulo está disponible
+    if (window.productosModule) {
+        setupProductoAutocompletado();
+    }
+    
     // Actualizar encabezado de la tabla para incluir nuevas columnas
     setTimeout(actualizarEncabezadoTablaBodega, 1000);
 }
@@ -144,7 +149,7 @@ function setupBodegaButtonListeners() {
     }
 }
 
-// FUNCIÓN MODIFICADA: Cargar datos para el panel de Bodega
+// Cargar datos para el panel de Bodega
 function cargarDatosBodega() {
     if (!tablaSolicitudesBodega) return;
     
@@ -226,7 +231,7 @@ function cargarDatosBodega() {
     });
 }
 
-// NUEVA FUNCIÓN: Actualizar encabezado de la tabla de solicitudes en el panel de bodega
+// Actualizar encabezado de la tabla de solicitudes en el panel de bodega
 function actualizarEncabezadoTablaBodega() {
     // Buscar la tabla
     const tablaBodega = document.querySelector('#bodega-panel table thead tr');
@@ -263,7 +268,7 @@ function handlePageChange(newPage, panelName) {
     }
 }
 
-// FUNCIÓN MODIFICADA: Manejar el envío del formulario de nueva solicitud
+// Manejar el envío del formulario de nueva solicitud
 async function handleNuevaSolicitud(e) {
     e.preventDefault();
     
@@ -379,17 +384,19 @@ async function handleNuevaSolicitud(e) {
     }
 }
 
-// FUNCIÓN MODIFICADA: Agregar un nuevo item al formulario
+// Agregar un nuevo item al formulario
 function addItem() {
     const newRow = document.createElement('div');
     newRow.className = 'item-row';
     newRow.innerHTML = `
         <div class="row g-2 align-items-center">
-            <div class="col-md-4">
-                <input type="text" class="form-control" placeholder="Nombre del producto" name="producto[]" required>
+            <div class="col-md-3 position-relative">
+                <input type="text" class="form-control sku-input" placeholder="SKU" name="sku[]" autocomplete="off">
+                <div class="dropdown-menu producto-suggestions"></div>
             </div>
-            <div class="col-md-3">
-                <input type="text" class="form-control" placeholder="SKU (opcional)" name="sku[]">
+            <div class="col-md-4 position-relative">
+                <input type="text" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
+                <div class="dropdown-menu producto-suggestions"></div>
             </div>
             <div class="col-md-3">
                 <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
@@ -404,14 +411,17 @@ function addItem() {
     
     itemsContainer.appendChild(newRow);
     
+    // Configurar autocompletado para el nuevo item
+    setupAutocompletadoEnItems();
+    
     // Hacer scroll al nuevo elemento en móviles
     if (window.innerWidth < 768) {
         newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     
-    // Focus en el input de producto
+    // Focus en el input de SKU
     setTimeout(() => {
-        const input = newRow.querySelector('input[name="producto[]"]');
+        const input = newRow.querySelector('.sku-input');
         if (input) input.focus();
     }, 100);
 }
@@ -436,6 +446,299 @@ function removeItem(button) {
     }
 }
 
+// Configurar autocompletado de productos
+function setupProductoAutocompletado() {
+    // Configurar autocompletado para los elementos existentes
+    setupAutocompletadoEnItems();
+    
+    // Observar cambios en el contenedor de items para configurar autocompletado en nuevos elementos
+    const observador = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                setupAutocompletadoEnItems();
+            }
+        });
+    });
+    
+    // Iniciar observación del contenedor
+    if (itemsContainer) {
+        observador.observe(itemsContainer, { childList: true });
+    }
+}
+
+// Configurar autocompletado en todos los inputs de productos y SKUs
+function setupAutocompletadoEnItems() {
+    // Configurar SKU inputs
+    document.querySelectorAll('.sku-input').forEach(input => {
+        if (!input.dataset.autocompleteSetup) {
+            setupSkuInput(input);
+            input.dataset.autocompleteSetup = 'true';
+        }
+    });
+    
+    // Configurar producto inputs
+    document.querySelectorAll('.producto-input').forEach(input => {
+        if (!input.dataset.autocompleteSetup) {
+            setupProductoInput(input);
+            input.dataset.autocompleteSetup = 'true';
+        }
+    });
+}
+
+// Configurar input de SKU
+function setupSkuInput(input) {
+    // Elemento de sugerencias para este input
+    const suggestionsContainer = input.parentElement.querySelector('.producto-suggestions');
+    
+    // Al escribir en el input de SKU
+    input.addEventListener('input', function() {
+        const sku = this.value.trim();
+        
+        // Si no hay valor, ocultar sugerencias
+        if (!sku) {
+            suggestionsContainer.classList.remove('show');
+            return;
+        }
+        
+        // Buscar productos que coincidan con el SKU
+        const sugerencias = buscarProductosPorSku(sku);
+        mostrarSugerencias(suggestionsContainer, sugerencias, this);
+    });
+    
+    // Al hacer clic o presionar Enter en el input
+    input.addEventListener('click', function() {
+        if (this.value.trim()) {
+            const sugerencias = buscarProductosPorSku(this.value.trim());
+            mostrarSugerencias(suggestionsContainer, sugerencias, this);
+        }
+    });
+    
+    // Al perder el foco, verificar si el SKU existe y autocompletar nombre
+    input.addEventListener('blur', function() {
+        setTimeout(() => {
+            suggestionsContainer.classList.remove('show');
+            
+            const sku = this.value.trim();
+            if (sku && window.productosModule) {
+                const producto = window.productosModule.buscarProductoPorSku(sku);
+                if (producto) {
+                    // Encontrar el input de nombre de producto correspondiente
+                    const itemRow = this.closest('.item-row');
+                    const productoInput = itemRow.querySelector('.producto-input');
+                    if (productoInput) {
+                        productoInput.value = producto.nombre;
+                    }
+                }
+            }
+        }, 200);
+    });
+    
+    // Gestionar navegación con teclado y selección
+    input.addEventListener('keydown', function(e) {
+        manejarNavegacionTeclado(e, suggestionsContainer, this);
+    });
+}
+
+// Configurar input de nombre de producto
+function setupProductoInput(input) {
+    // Elemento de sugerencias para este input
+    const suggestionsContainer = input.parentElement.querySelector('.producto-suggestions');
+    
+    // Al escribir en el input de producto
+    input.addEventListener('input', function() {
+        const nombre = this.value.trim();
+        
+        // Si no hay valor, ocultar sugerencias
+        if (!nombre) {
+            suggestionsContainer.classList.remove('show');
+            return;
+        }
+        
+        // Buscar productos que coincidan con el nombre
+        const sugerencias = buscarProductosPorNombre(nombre);
+        mostrarSugerencias(suggestionsContainer, sugerencias, this);
+    });
+    
+    // Al hacer clic o presionar Enter en el input
+    input.addEventListener('click', function() {
+        if (this.value.trim()) {
+            const sugerencias = buscarProductosPorNombre(this.value.trim());
+            mostrarSugerencias(suggestionsContainer, sugerencias, this);
+        }
+    });
+    
+    // Al perder el foco, verificar si el nombre existe y autocompletar SKU
+    input.addEventListener('blur', function() {
+        setTimeout(() => {
+            suggestionsContainer.classList.remove('show');
+            
+            const nombre = this.value.trim();
+            if (nombre && window.productosModule) {
+                const producto = window.productosModule.buscarProductoPorNombre(nombre);
+                if (producto) {
+                    // Encontrar el input de SKU correspondiente
+                    const itemRow = this.closest('.item-row');
+                    const skuInput = itemRow.querySelector('.sku-input');
+                    if (skuInput) {
+                        skuInput.value = producto.sku;
+                    }
+                }
+            }
+        }, 200);
+    });
+    
+    // Gestionar navegación con teclado y selección
+    input.addEventListener('keydown', function(e) {
+        manejarNavegacionTeclado(e, suggestionsContainer, this);
+    });
+}
+
+// Buscar productos por SKU
+function buscarProductosPorSku(sku) {
+    if (!window.productosModule) return [];
+    
+    // Filtrar productos que coincidan con el SKU
+    return window.productosModule.getProductos().filter(producto => 
+        producto.sku && producto.sku.toLowerCase().includes(sku.toLowerCase())
+    ).slice(0, 10); // Mostrar solo los primeros 10 resultados
+}
+
+// Buscar productos por nombre
+function buscarProductosPorNombre(nombre) {
+    if (!window.productosModule) return [];
+    
+    // Filtrar productos que coincidan con el nombre
+    return window.productosModule.getProductos().filter(producto => 
+        producto.nombre && producto.nombre.toLowerCase().includes(nombre.toLowerCase())
+    ).slice(0, 10); // Mostrar solo los primeros 10 resultados
+}
+
+// Mostrar sugerencias en el contenedor
+function mostrarSugerencias(container, sugerencias, inputOrigen) {
+    // Limpiar y ocultar si no hay sugerencias
+    if (!sugerencias || sugerencias.length === 0) {
+        container.innerHTML = '';
+        container.classList.remove('show');
+        return;
+    }
+    
+    // Limpiar contenedor
+    container.innerHTML = '';
+    
+    // Crear elementos para cada sugerencia
+    sugerencias.forEach(producto => {
+        const item = document.createElement('div');
+        item.className = 'producto-suggestion-item';
+        item.innerHTML = `
+            <div class="suggestion-sku">${producto.sku}</div>
+            <div class="suggestion-nombre">${producto.nombre}</div>
+        `;
+        
+        // Al hacer clic en una sugerencia
+        item.addEventListener('click', () => {
+            // Determinar qué tipo de input es el origen
+            const esSkuInput = inputOrigen.classList.contains('sku-input');
+            const itemRow = inputOrigen.closest('.item-row');
+            
+            if (esSkuInput) {
+                // Completar input de SKU
+                inputOrigen.value = producto.sku;
+                
+                // Completar input de nombre de producto
+                const productoInput = itemRow.querySelector('.producto-input');
+                if (productoInput) {
+                    productoInput.value = producto.nombre;
+                }
+            } else {
+                // Completar input de nombre de producto
+                inputOrigen.value = producto.nombre;
+                
+                // Completar input de SKU
+                const skuInput = itemRow.querySelector('.sku-input');
+                if (skuInput) {
+                    skuInput.value = producto.sku;
+                }
+            }
+            
+            // Ocultar sugerencias
+            container.classList.remove('show');
+            
+            // Mover foco al input de cantidad
+            const cantidadInput = itemRow.querySelector('input[name="cantidad[]"]');
+            if (cantidadInput) {
+                cantidadInput.focus();
+            }
+        });
+        
+        container.appendChild(item);
+    });
+    
+    // Mostrar contenedor
+    container.classList.add('show');
+}
+
+// Manejar navegación con teclado en el dropdown
+function manejarNavegacionTeclado(e, container, input) {
+    // Si el dropdown no está visible, no hacer nada
+    if (!container.classList.contains('show')) return;
+    
+    const items = container.querySelectorAll('.producto-suggestion-item');
+    let activeItem = container.querySelector('.producto-suggestion-item.active');
+    let activeIndex = -1;
+    
+    if (activeItem) {
+        // Encontrar índice del item activo
+        for (let i = 0; i < items.length; i++) {
+            if (items[i] === activeItem) {
+                activeIndex = i;
+                break;
+            }
+        }
+    }
+    
+    switch (e.key) {
+        case 'ArrowDown':
+            e.preventDefault();
+            // Ir al siguiente item
+            if (activeItem) {
+                activeItem.classList.remove('active');
+                activeIndex = (activeIndex + 1) % items.length;
+            } else {
+                activeIndex = 0;
+            }
+            items[activeIndex].classList.add('active');
+            items[activeIndex].scrollIntoView({ block: 'nearest' });
+            break;
+            
+        case 'ArrowUp':
+            e.preventDefault();
+            // Ir al item anterior
+            if (activeItem) {
+                activeItem.classList.remove('active');
+                activeIndex = (activeIndex - 1 + items.length) % items.length;
+            } else {
+                activeIndex = items.length - 1;
+            }
+            items[activeIndex].classList.add('active');
+            items[activeIndex].scrollIntoView({ block: 'nearest' });
+            break;
+            
+        case 'Enter':
+            // Seleccionar item activo
+            if (activeItem) {
+                e.preventDefault();
+                activeItem.click();
+            }
+            break;
+            
+        case 'Escape':
+            // Cerrar dropdown
+            e.preventDefault();
+            container.classList.remove('show');
+            break;
+    }
+}
+
 // Asegurarse de que la fecha se establezca cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
     // Si el panel de bodega está visible al cargar la página, establecer la fecha
@@ -446,4 +749,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // También podemos asegurarnos de que los listeners están configurados
     setupBodegaButtonListeners();
+    
+    // Configurar autocompletado de productos
+    if (window.productosModule) {
+        setupProductoAutocompletado();
+    }
 });
