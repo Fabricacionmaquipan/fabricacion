@@ -253,31 +253,16 @@ function showActualizarEstadoModal(solicitudId) {
         const fechaEntregaContainer = document.getElementById('fecha-entrega-container');
         const fechaEntregaInput = document.getElementById('fecha-entrega');
         
-        if (nuevoEstadoSelect.value === 'Entregado') {
-            fechaEntregaContainer.style.display = 'block';
-            
-            // Si ya tiene fechaEntrega, establecerla
-            if (solicitud.fechaEntrega) {
-                fechaEntregaInput.value = solicitud.fechaEntrega;
-            } else {
-                // Por defecto, establecer fecha actual
-                const hoy = new Date();
-                const fechaActual = hoy.toISOString().split('T')[0];
-                fechaEntregaInput.value = fechaActual;
-            }
-        } else {
-            fechaEntregaContainer.style.display = 'none';
-        }
-        
-        // Establecer observaciones
-        observacionesText.value = solicitud.observaciones || '';
-        
-        // Configurar evento para mostrar/ocultar fecha de entrega según el estado seleccionado
-        const onEstadoChange = function() {
-            if (this.value === 'Entregado') {
+        if (fechaEntregaContainer && fechaEntregaInput) {
+            // Mostrar el campo si el estado actual o seleccionado es "Entregado"
+            if (nuevoEstadoSelect.value === 'Entregado') {
                 fechaEntregaContainer.style.display = 'block';
-                // Establecer fecha actual por defecto
-                if (!fechaEntregaInput.value) {
+                
+                // Si ya tiene fechaEntrega, establecerla
+                if (solicitud.fechaEntrega) {
+                    fechaEntregaInput.value = solicitud.fechaEntrega;
+                } else {
+                    // Por defecto, establecer fecha actual
                     const hoy = new Date();
                     const fechaActual = hoy.toISOString().split('T')[0];
                     fechaEntregaInput.value = fechaActual;
@@ -285,12 +270,30 @@ function showActualizarEstadoModal(solicitudId) {
             } else {
                 fechaEntregaContainer.style.display = 'none';
             }
-        };
+            
+            // Configurar evento para mostrar/ocultar fecha de entrega según el estado seleccionado
+            const handleEstadoChange = function() {
+                if (this.value === 'Entregado') {
+                    fechaEntregaContainer.style.display = 'block';
+                    // Si el campo está vacío, establecer fecha actual
+                    if (!fechaEntregaInput.value) {
+                        const hoy = new Date();
+                        const fechaActual = hoy.toISOString().split('T')[0];
+                        fechaEntregaInput.value = fechaActual;
+                    }
+                } else {
+                    fechaEntregaContainer.style.display = 'none';
+                }
+            };
+            
+            // Remover listener anterior (para evitar múltiples handlers)
+            nuevoEstadoSelect.removeEventListener('change', handleEstadoChange);
+            // Añadir el listener
+            nuevoEstadoSelect.addEventListener('change', handleEstadoChange);
+        }
         
-        // Remover listener anterior si existe (para evitar duplicados)
-        nuevoEstadoSelect.removeEventListener('change', onEstadoChange);
-        // Añadir nuevo listener
-        nuevoEstadoSelect.addEventListener('change', onEstadoChange);
+        // Establecer observaciones
+        observacionesText.value = solicitud.observaciones || '';
         
         // Preparar el modal con info adicional
         const modalTitle = actualizarEstadoModal.querySelector('.modal-title');
