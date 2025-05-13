@@ -149,8 +149,7 @@ function setupBodegaButtonListeners() {
     }
 }
 
-// Cargar datos para el panel de Bodega
-// Cargar datos para el panel de Bodega
+// Actualiza la función para mostrar la fecha de entrega en la tabla
 function cargarDatosBodega() {
     if (!tablaSolicitudesBodega) return;
     
@@ -213,18 +212,18 @@ function cargarDatosBodega() {
         // Crear ID corto para mejor visualización
         const idCorto = solicitud.id.substring(solicitud.id.length - 6);
         
-        // Obtener fecha de entrega
+        // Obtener fecha de entrega si existe (propiedad directa o del historial)
         let fechaEntrega = 'Pendiente';
-        
-        // Buscar en el historial la fecha de entrega
-        if (solicitud.estado === 'Entregado' && solicitud.historial) {
-            // Buscar el último registro con estado "Entregado"
+        if (solicitud.fechaEntrega) {
+            fechaEntrega = formatDate(solicitud.fechaEntrega);
+        } else if (solicitud.estado === 'Entregado' && solicitud.historial) {
+            // Buscar en el historial si no está como propiedad directa
             const entregaHistorial = [...solicitud.historial]
                 .reverse()
-                .find(h => h.estado === 'Entregado');
+                .find(h => h.estado === 'Entregado' && h.fechaEntrega);
             
-            if (entregaHistorial && entregaHistorial.fecha) {
-                fechaEntrega = formatDate(entregaHistorial.fecha);
+            if (entregaHistorial && entregaHistorial.fechaEntrega) {
+                fechaEntrega = formatDate(entregaHistorial.fechaEntrega);
             }
         }
         
