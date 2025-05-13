@@ -340,7 +340,7 @@ function showActualizarEstadoModal(solicitudId) {
     }
 }
 
-// Manejar la actualización de estado
+// Manejar la actualización de estado (será sobreescrito en app.js)
 function handleActualizarEstado(e) {
     e.preventDefault();
     console.log("Manejando actualización de estado");
@@ -350,9 +350,13 @@ function handleActualizarEstado(e) {
     const observaciones = observacionesText.value;
     
     // Obtener fecha de entrega si el estado es "Entregado"
-    const fechaEntrega = nuevoEstado === 'Entregado' 
-        ? document.getElementById('fecha-entrega').value 
-        : null;
+    let fechaEntrega = null;
+    if (nuevoEstado === 'Entregado') {
+        const fechaEntregaInput = document.getElementById('fecha-entrega');
+        if (fechaEntregaInput && fechaEntregaInput.value) {
+            fechaEntrega = fechaEntregaInput.value;
+        }
+    }
     
     // Verificar si tenemos el usuario actual y la función de actualización
     if (typeof getCurrentUser === 'function' && typeof handleActualizarEstadoConUsuario === 'function') {
@@ -365,7 +369,7 @@ function handleActualizarEstado(e) {
             }
             
             // Llamar a la función con información de usuario y fecha de entrega
-            console.log("Llamando a handleActualizarEstadoConUsuario");
+            console.log("Llamando a handleActualizarEstadoConUsuario con fecha:", fechaEntrega);
             handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser, fechaEntrega);
             return;
         } else {
