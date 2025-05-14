@@ -129,3 +129,65 @@
         transform: translateY(-10px);
     }
 }
+/* Estilos para la importación de repuestos */
+.preview-container {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+}
+
+.preview-container table {
+    margin-bottom: 0;
+}
+
+.preview-container thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8f9fa;
+    z-index: 1;
+}
+
+#import-progress-container {
+    height: 20px;
+}
+
+#import-results {
+    margin-bottom: 1rem;
+}
+
+#import-results ul {
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+}
+
+/* Estilos para campos de archivo */
+.custom-file-input::-webkit-file-upload-button {
+    visibility: hidden;
+}
+
+.custom-file-input::before {
+    content: 'Seleccionar archivo';
+    display: inline-block;
+    background: linear-gradient(top, #f9f9f9, #e3e3e3);
+    border: 1px solid #999;
+    border-radius: 3px;
+    padding: 5px 8px;
+    outline: none;
+    white-space: nowrap;
+    -webkit-user-select: none;
+    cursor: pointer;
+    text-shadow: 1px 1px #fff;
+    font-weight: 700;
+    font-size: 10pt;
+}
+
+.custom-file-input:hover::before {
+    border-color: black;
+}
+
+.custom-file-input:active::before {
+    background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+}
