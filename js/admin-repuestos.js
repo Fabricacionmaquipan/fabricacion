@@ -1,121 +1,413 @@
-// admin-repuestos.js - Gestión de repuestos en el panel de administración
-
-// Variables y elementos del DOM
-let tablaRepuestos;
-let currentPageRepuestos = 1;
-let filterTermRepuestos = '';
-
-// Inicializar módulo de admin-repuestos
-function initAdminRepuestos() {
-    console.log("Inicializando panel de administración de repuestos...");
-    
-    // Verificar que el módulo de repuestos esté disponible
-    if (!window.repuestosModule) {
-        console.error("Módulo de repuestos no disponible. La administración de repuestos no funcionará correctamente.");
-        return;
-    }
-    
-    // Añadir pestaña de repuestos al panel de administración
-    agregarPestañaRepuestos();
-    
-    // Configurar listeners
-    setupRepuestosListeners();
-    
-    console.log("Panel de administración de repuestos inicializado");
+// Función para implementar en admin-repuestos.js
+function importarRepuestosCSV() {
+    // Crear modal para importación
+    mostrarModalImportarRepuestos();
 }
 
-// Añadir pestaña de repuestos al panel de admin
-function agregarPestañaRepuestos() {
-    console.log("Agregando pestaña de repuestos al panel de administración...");
+// Función para mostrar el modal de importación
+function mostrarModalImportarRepuestos() {
+    console.log("Mostrando modal de importación de repuestos...");
     
-    // Obtener el contenedor de pestañas
-    const adminTabs = document.getElementById('adminTabs');
-    const adminTabContent = document.getElementById('adminTabContent');
+    // Verificar si el modal ya existe
+    let importarModal = document.getElementById('importar-repuestos-modal');
     
-    if (!adminTabs || !adminTabContent) {
-        console.error("No se encontraron los contenedores de pestañas de administración");
-        return;
-    }
-    
-    // Añadir pestaña de repuestos
-    const repuestosTab = document.createElement('li');
-    repuestosTab.className = 'nav-item';
-    repuestosTab.setAttribute('role', 'presentation');
-    repuestosTab.innerHTML = `
-        <button class="nav-link" id="repuestos-tab" data-bs-toggle="tab" data-bs-target="#repuestos-content" 
-                type="button" role="tab" aria-controls="repuestos-content" aria-selected="false">
-            <i class="fas fa-tools me-1"></i> Repuestos
-        </button>
-    `;
-    
-    // Insertar después de la pestaña de usuarios
-    const usuariosTab = document.getElementById('usuarios-tab');
-    if (usuariosTab) {
-        adminTabs.insertBefore(repuestosTab, usuariosTab.parentNode.nextSibling);
-    } else {
-        adminTabs.appendChild(repuestosTab);
-    }
-    
-    // Añadir contenido de la pestaña
-    const repuestosContent = document.createElement('div');
-    repuestosContent.className = 'tab-pane fade';
-    repuestosContent.id = 'repuestos-content';
-    repuestosContent.setAttribute('role', 'tabpanel');
-    repuestosContent.setAttribute('aria-labelledby', 'repuestos-tab');
-    
-    repuestosContent.innerHTML = `
-        <div class="card">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Gestión de Repuestos</h5>
-                    <div class="d-flex gap-2">
-                        <div class="input-group input-group-sm" style="width: 200px;">
-                            <input type="text" class="form-control" placeholder="Buscar..." id="buscar-repuesto">
-                            <button class="btn btn-outline-secondary" type="button">
-                                <i class="fas fa-search"></i>
-                            </button>
-                        </div>
-                        <button class="btn btn-sm btn-primary" id="btn-nuevo-repuesto">
-                            <i class="fas fa-plus me-1"></i> Nuevo Repuesto
-                        </button>
-                        <button class="btn btn-sm btn-outline-primary" id="btn-importar-repuestos">
-                            <i class="fas fa-file-import me-1"></i> Importar
-                        </button>
-                        <button class="btn btn-sm btn-outline-secondary" id="btn-exportar-repuestos">
-                            <i class="fas fa-file-export me-1"></i> Exportar
-                        </button>
+    // Si no existe, crearlo
+    if (!importarModal) {
+        importarModal = document.createElement('div');
+        importarModal.className = 'modal fade';
+        importarModal.id = 'importar-repuestos-modal';
+        importarModal.setAttribute('tabindex', '-1');
+        importarModal.setAttribute('aria-hidden', 'true');
+        
+        importarModal.innerHTML = `
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><i class="fas fa-file-import me-2"></i>Importar Repuestos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="importar-repuestos-form">
+                            <div class="mb-3">
+                                <label for="archivo-csv" class="form-label">Archivo CSV</label>
+                                <input type="file" class="form-control" id="archivo-csv" accept=".csv" required>
+                                <small class="form-text text-muted">
+                                    El archivo debe tener el formato: SKU, Nombre, Categoría, Stock
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" id="tiene-encabezados" checked>
+                                <label class="form-check-label" for="tiene-encabezados">El archivo tiene encabezados</label>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Opciones de importación</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="opcion-duplicados" id="opcion-saltar" value="saltar" checked>
+                                    <label class="form-check-label" for="opcion-saltar">
+                                        Saltar registros duplicados
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="opcion-duplicados" id="opcion-actualizar" value="actualizar">
+                                    <label class="form-check-label" for="opcion-actualizar">
+                                        Actualizar registros duplicados
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div id="preview-container" class="preview-container mb-3" style="display: none;">
+                                <label class="form-label">Vista previa</label>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-bordered">
+                                        <thead id="preview-headers">
+                                            <!-- Se llenará con JavaScript -->
+                                        </thead>
+                                        <tbody id="preview-body">
+                                            <!-- Se llenará con JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <small class="text-muted">Mostrando los primeros 5 registros</small>
+                            </div>
+                            
+                            <div class="progress mb-3" style="display: none;" id="import-progress-container">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     id="import-progress-bar" role="progressbar" 
+                                     aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                                    0%
+                                </div>
+                            </div>
+                            
+                            <div id="import-results" class="alert" style="display: none;"></div>
+                            
+                            <div class="text-end">
+                                <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="button" class="btn btn-primary" id="btn-procesar-importacion" disabled>
+                                    Importar Repuestos
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>SKU</th>
-                            <th>Nombre</th>
-                            <th>Categoría</th>
-                            <th>Stock</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-repuestos">
-                        <!-- Se llenará con JavaScript -->
-                    </tbody>
-                </table>
-            </div>
-            <div class="card-footer p-2">
-                <!-- Aquí se insertarán los controles de paginación -->
-            </div>
-        </div>
-    `;
+        `;
+        
+        // Añadir al DOM
+        document.body.appendChild(importarModal);
+        
+        // Configurar eventos
+        configurarEventosImportacion();
+    }
     
-    adminTabContent.appendChild(repuestosContent);
+    // Limpiar cualquier modal o backdrop existente
+    const existingBackdrop = document.querySelector('.modal-backdrop');
+    if (existingBackdrop) {
+        existingBackdrop.remove();
+    }
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
     
-    // Actualizar referencia a la tabla de repuestos
-    tablaRepuestos = document.getElementById('tabla-repuestos');
+    // Mostrar el modal
+    const modal = new bootstrap.Modal(importarModal);
+    modal.show();
 }
 
-// Configurar event listeners para la gestión de repuestos
+// Configurar eventos para el modal de importación
+function configurarEventosImportacion() {
+    // Input de archivo
+    const archivoInput = document.getElementById('archivo-csv');
+    if (archivoInput) {
+        archivoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Habilitar botón de importación
+                document.getElementById('btn-procesar-importacion').disabled = false;
+                
+                // Mostrar vista previa
+                mostrarVistaPrevia(file);
+            } else {
+                // Deshabilitar botón si no hay archivo
+                document.getElementById('btn-procesar-importacion').disabled = true;
+            }
+        });
+    }
+    
+    // Botón de procesar importación
+    const btnProcesarImportacion = document.getElementById('btn-procesar-importacion');
+    if (btnProcesarImportacion) {
+        btnProcesarImportacion.addEventListener('click', function() {
+            const file = document.getElementById('archivo-csv').files[0];
+            const tieneEncabezados = document.getElementById('tiene-encabezados').checked;
+            const opcionDuplicados = document.querySelector('input[name="opcion-duplicados"]:checked').value;
+            
+            if (file) {
+                procesarImportacionCSV(file, tieneEncabezados, opcionDuplicados);
+            }
+        });
+    }
+}
+
+// Mostrar vista previa del CSV
+function mostrarVistaPrevia(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const contenido = e.target.result;
+        const tieneEncabezados = document.getElementById('tiene-encabezados').checked;
+        const previewContainer = document.getElementById('preview-container');
+        const previewHeaders = document.getElementById('preview-headers');
+        const previewBody = document.getElementById('preview-body');
+        
+        // Parsear el CSV
+        let lineas = contenido.split(/\r\n|\n/);
+        let filas = [];
+        
+        // Procesar líneas
+        for (let i = 0; i < lineas.length; i++) {
+            if (lineas[i].trim() === '') continue;
+            
+            // Manejar campos que contienen comas dentro de comillas
+            const campos = [];
+            let campo = '';
+            let entreComillas = false;
+            
+            for (let j = 0; j < lineas[i].length; j++) {
+                const char = lineas[i][j];
+                
+                if (char === '"') {
+                    entreComillas = !entreComillas;
+                } else if (char === ',' && !entreComillas) {
+                    campos.push(campo);
+                    campo = '';
+                } else {
+                    campo += char;
+                }
+            }
+            
+            // Añadir el último campo
+            campos.push(campo);
+            
+            // Limpiar comillas de los campos
+            for (let j = 0; j < campos.length; j++) {
+                if (campos[j].startsWith('"') && campos[j].endsWith('"')) {
+                    campos[j] = campos[j].slice(1, -1).replace(/""/g, '"');
+                }
+            }
+            
+            filas.push(campos);
+        }
+        
+        // Mostrar encabezados
+        let encabezados = tieneEncabezados ? filas[0] : ['SKU', 'Nombre', 'Categoría', 'Stock'];
+        let headerRow = '<tr>';
+        
+        encabezados.forEach(encabezado => {
+            headerRow += `<th>${encabezado}</th>`;
+        });
+        
+        headerRow += '</tr>';
+        previewHeaders.innerHTML = headerRow;
+        
+        // Mostrar datos (hasta 5 filas)
+        previewBody.innerHTML = '';
+        const inicioFilas = tieneEncabezados ? 1 : 0;
+        const maxFilas = Math.min(inicioFilas + 5, filas.length);
+        
+        for (let i = inicioFilas; i < maxFilas; i++) {
+            let fila = '<tr>';
+            filas[i].forEach(campo => {
+                fila += `<td>${campo}</td>`;
+            });
+            fila += '</tr>';
+            previewBody.innerHTML += fila;
+        }
+        
+        // Mostrar contenedor de vista previa
+        previewContainer.style.display = 'block';
+    };
+    
+    reader.readAsText(file);
+}
+
+// Procesar la importación del CSV
+async function procesarImportacionCSV(file, tieneEncabezados, opcionDuplicados) {
+    const reader = new FileReader();
+    
+    reader.onload = async function(e) {
+        try {
+            const contenido = e.target.result;
+            let lineas = contenido.split(/\r\n|\n/);
+            let repuestosAImportar = [];
+            
+            // Eliminar líneas vacías
+            lineas = lineas.filter(linea => linea.trim() !== '');
+            
+            // Determinar inicio de datos
+            const inicioFilas = tieneEncabezados ? 1 : 0;
+            
+            // Mostrar barra de progreso
+            const progressContainer = document.getElementById('import-progress-container');
+            const progressBar = document.getElementById('import-progress-bar');
+            progressContainer.style.display = 'flex';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            progressBar.setAttribute('aria-valuenow', 0);
+            
+            // Ocultar resultados anteriores
+            document.getElementById('import-results').style.display = 'none';
+            
+            // Procesar cada línea
+            for (let i = inicioFilas; i < lineas.length; i++) {
+                // Manejar campos que contienen comas dentro de comillas
+                const campos = [];
+                let campo = '';
+                let entreComillas = false;
+                
+                for (let j = 0; j < lineas[i].length; j++) {
+                    const char = lineas[i][j];
+                    
+                    if (char === '"') {
+                        entreComillas = !entreComillas;
+                    } else if (char === ',' && !entreComillas) {
+                        campos.push(campo);
+                        campo = '';
+                    } else {
+                        campo += char;
+                    }
+                }
+                
+                // Añadir el último campo
+                campos.push(campo);
+                
+                // Limpiar comillas de los campos
+                for (let j = 0; j < campos.length; j++) {
+                    if (campos[j].startsWith('"') && campos[j].endsWith('"')) {
+                        campos[j] = campos[j].slice(1, -1).replace(/""/g, '"');
+                    }
+                }
+                
+                if (campos.length >= 2) {  // Al menos debe tener SKU y Nombre
+                    const repuesto = {
+                        id: 'R' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
+                        sku: campos[0].trim(),
+                        nombre: campos[1].trim(),
+                        categoria: campos.length > 2 ? campos[2].trim() : '',
+                        stock: campos.length > 3 ? parseInt(campos[3].trim()) || 0 : 0
+                    };
+                    
+                    repuestosAImportar.push(repuesto);
+                }
+                
+                // Actualizar progreso de lectura
+                const progreso = Math.round(((i - inicioFilas + 1) / (lineas.length - inicioFilas)) * 40);
+                progressBar.style.width = `${progreso}%`;
+                progressBar.textContent = `${progreso}%`;
+                progressBar.setAttribute('aria-valuenow', progreso);
+                
+                // Dar tiempo para actualizar la UI
+                if ((i - inicioFilas) % 100 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
+            
+            // Verificar duplicados y realizar importación
+            let importados = 0;
+            let actualizados = 0;
+            let saltados = 0;
+            let errores = 0;
+            
+            const total = repuestosAImportar.length;
+            
+            for (let i = 0; i < repuestosAImportar.length; i++) {
+                try {
+                    const repuesto = repuestosAImportar[i];
+                    const repuestoExistente = window.repuestosModule.buscarRepuestoPorSku(repuesto.sku);
+                    
+                    if (repuestoExistente) {
+                        // Existe un repuesto con el mismo SKU
+                        if (opcionDuplicados === 'actualizar') {
+                            // Actualizar el existente
+                            repuesto.id = repuestoExistente.id; // Mantener ID original
+                            await window.repuestosModule.actualizarRepuesto(repuesto);
+                            actualizados++;
+                        } else {
+                            // Saltar duplicados
+                            saltados++;
+                        }
+                    } else {
+                        // Nuevo repuesto
+                        await window.repuestosModule.agregarRepuesto(repuesto);
+                        importados++;
+                    }
+                    
+                    // Actualizar progreso de importación
+                    const progreso = 40 + Math.round(((i + 1) / total) * 60);
+                    progressBar.style.width = `${progreso}%`;
+                    progressBar.textContent = `${progreso}%`;
+                    progressBar.setAttribute('aria-valuenow', progreso);
+                    
+                    // Dar tiempo para actualizar la UI
+                    if (i % 20 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                } catch (error) {
+                    console.error('Error al importar repuesto:', error);
+                    errores++;
+                }
+            }
+            
+            // Finalizar proceso
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            progressBar.setAttribute('aria-valuenow', 100);
+            progressBar.classList.remove('progress-bar-animated');
+            
+            // Mostrar resultados
+            const resultadosDiv = document.getElementById('import-results');
+            resultadosDiv.className = errores > 0 ? 'alert alert-warning' : 'alert alert-success';
+            resultadosDiv.innerHTML = `
+                <h5><i class="fas ${errores > 0 ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-2"></i>Resultado de la importación</h5>
+                <p class="mb-1">Se procesaron ${total} registros del archivo.</p>
+                <ul class="mb-0">
+                    <li><strong>Nuevos repuestos:</strong> ${importados}</li>
+                    <li><strong>Actualizados:</strong> ${actualizados}</li>
+                    <li><strong>Saltados (duplicados):</strong> ${saltados}</li>
+                    <li><strong>Errores:</strong> ${errores}</li>
+                </ul>
+            `;
+            resultadosDiv.style.display = 'block';
+            
+            // Recargar tabla de repuestos
+            cargarTablaRepuestos();
+            
+            // Cambiar texto del botón
+            document.getElementById('btn-procesar-importacion').textContent = 'Importación Completada';
+            document.getElementById('btn-procesar-importacion').disabled = true;
+            
+        } catch (error) {
+            console.error('Error en proceso de importación:', error);
+            
+            // Mostrar error
+            const resultadosDiv = document.getElementById('import-results');
+            resultadosDiv.className = 'alert alert-danger';
+            resultadosDiv.innerHTML = `
+                <h5><i class="fas fa-exclamation-circle me-2"></i>Error en la importación</h5>
+                <p class="mb-0">Se produjo un error durante el proceso: ${error.message}</p>
+            `;
+            resultadosDiv.style.display = 'block';
+            
+            // Ocultar progreso
+            document.getElementById('import-progress-container').style.display = 'none';
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+// Actualizar el listener para el botón de importar
 function setupRepuestosListeners() {
     console.log("Configurando event listeners para gestión de repuestos...");
     
@@ -137,12 +429,11 @@ function setupRepuestosListeners() {
         });
     }
     
-    // Botón para importar repuestos
+    // Botón para importar repuestos - ACTUALIZADO
     const btnImportarRepuestos = document.getElementById('btn-importar-repuestos');
     if (btnImportarRepuestos) {
         btnImportarRepuestos.addEventListener('click', function() {
-            // Aquí iría la lógica para importar repuestos desde CSV
-            mostrarAlerta('Funcionalidad de importación no implementada', 'info');
+            importarRepuestosCSV();
         });
     }
     
@@ -189,392 +480,13 @@ function setupRepuestosListeners() {
     });
 }
 
-// Cargar tabla de repuestos con paginación y filtrado
-function cargarTablaRepuestos() {
-    if (!tablaRepuestos || !window.repuestosModule) return;
-    
-    // Obtener repuestos
-    const repuestosLista = window.repuestosModule.getRepuestos();
-    
-    // Filtrar repuestos
-    let repuestosFiltrados = repuestosLista;
-    if (filterTermRepuestos) {
-        repuestosFiltrados = repuestosLista.filter(r => 
-            (r.sku && r.sku.toLowerCase().includes(filterTermRepuestos)) ||
-            (r.nombre && r.nombre.toLowerCase().includes(filterTermRepuestos)) ||
-            (r.categoria && r.categoria.toLowerCase().includes(filterTermRepuestos))
-        );
-    }
-    
-    // Paginar repuestos
-    const ITEMS_PER_PAGE = 10;
-    const startIndex = (currentPageRepuestos - 1) * ITEMS_PER_PAGE;
-    const repuestosPaginados = repuestosFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-    const totalItems = repuestosFiltrados.length;
-    
-    // Limpiar tabla
-    tablaRepuestos.innerHTML = '';
-    
-    // Verificar si hay repuestos
-    if (repuestosPaginados.length === 0) {
-        tablaRepuestos.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <div class="d-flex flex-column align-items-center">
-                        <i class="fas fa-tools text-muted mb-2" style="font-size: 2rem;"></i>
-                        <p class="mb-0">No hay repuestos disponibles</p>
-                        ${filterTermRepuestos ? '<small class="text-muted">Intenta con otra búsqueda</small>' : ''}
-                    </div>
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    // Mostrar repuestos
-    repuestosPaginados.forEach(repuesto => {
-        const tr = document.createElement('tr');
-        
-        tr.innerHTML = `
-            <td data-label="SKU">${repuesto.sku}</td>
-            <td data-label="Nombre">${repuesto.nombre}</td>
-            <td data-label="Categoría">${repuesto.categoria || '<span class="text-muted">Sin categoría</span>'}</td>
-            <td data-label="Stock">
-                <span class="badge ${repuesto.stock > 20 ? 'bg-success' : repuesto.stock > 5 ? 'bg-warning' : 'bg-danger'}">
-                    ${repuesto.stock || 0}
-                </span>
-            </td>
-            <td data-label="Acciones">
-                <div class="btn-group">
-                    <button class="btn btn-sm btn-warning btn-editar-repuesto" data-id="${repuesto.id}">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-sm btn-danger btn-eliminar-repuesto" data-id="${repuesto.id}">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
-                </div>
-            </td>
-        `;
-        
-        tablaRepuestos.appendChild(tr);
-    });
-    
-    // Actualizar paginación
-    createPaginationControls(
-        '#repuestos-content .card-footer',
-        totalItems,
-        currentPageRepuestos,
-        handlePageChangeRepuestos,
-        'repuestos'
-    );
-}
-
-// Manejar cambio de página
-function handlePageChangeRepuestos(newPage) {
-    currentPageRepuestos = newPage;
-    cargarTablaRepuestos();
-}
-
-// Mostrar modal para añadir/editar repuesto
-function mostrarModalRepuesto(repuestoId = null) {
-    console.log("Mostrando modal de repuesto:", repuestoId);
-    
-    // Verificar si el modal ya existe
-    let repuestoModal = document.getElementById('repuesto-modal');
-    
-    // Si no existe, crearlo
-    if (!repuestoModal) {
-        // Crear el modal
-        repuestoModal = document.createElement('div');
-        repuestoModal.className = 'modal fade';
-        repuestoModal.id = 'repuesto-modal';
-        repuestoModal.setAttribute('tabindex', '-1');
-        repuestoModal.setAttribute('aria-hidden', 'true');
-        
-        repuestoModal.innerHTML = `
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="repuesto-modal-title"><i class="fas fa-tools me-2"></i>Nuevo Repuesto</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="repuesto-form">
-                            <input type="hidden" id="repuesto-id">
-                            <div class="mb-3">
-                                <label for="repuesto-sku" class="form-label">SKU</label>
-                                <input type="text" class="form-control" id="repuesto-sku" required>
-                                <small class="form-text text-muted">Código único de identificación del repuesto</small>
-                            </div>
-                            <div class="mb-3">
-                                <label for="repuesto-nombre" class="form-label">Nombre</label>
-                                <input type="text" class="form-control" id="repuesto-nombre" required>
-                            </div>
-                            <div class="mb-3">
-                                <label for="repuesto-categoria" class="form-label">Categoría</label>
-                                <select class="form-select" id="repuesto-categoria">
-                                    <option value="">-- Seleccionar categoría --</option>
-                                    <option value="Tornillos">Tornillos</option>
-                                    <option value="Tuercas">Tuercas</option>
-                                    <option value="Arandelas">Arandelas</option>
-                                    <option value="Pasadores">Pasadores</option>
-                                    <option value="Rodamientos">Rodamientos</option>
-                                    <option value="Transmisión">Transmisión</option>
-                                    <option value="Filtros">Filtros</option>
-                                    <option value="Juntas">Juntas</option>
-                                    <option value="Embrague">Embrague</option>
-                                    <option value="Refrigeración">Refrigeración</option>
-                                    <option value="Suspensión">Suspensión</option>
-                                    <option value="Frenos">Frenos</option>
-                                    <option value="Encendido">Encendido</option>
-                                    <option value="Eléctrico">Eléctrico</option>
-                                    <option value="Otros">Otros</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="repuesto-stock" class="form-label">Stock</label>
-                                <input type="number" class="form-control" id="repuesto-stock" min="0" value="0">
-                            </div>
-                            <div class="text-end">
-                                <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                                <button type="submit" class="btn btn-primary">Guardar Repuesto</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Añadir al DOM
-        document.body.appendChild(repuestoModal);
-        
-        // Configurar evento para el formulario
-        document.getElementById('repuesto-form').addEventListener('submit', function(e) {
-            e.preventDefault();
-            guardarRepuesto();
-        });
-    }
-    
-    // Limpiar cualquier modal o backdrop existente
-    const existingBackdrop = document.querySelector('.modal-backdrop');
-    if (existingBackdrop) {
-        existingBackdrop.remove();
-    }
-    document.body.classList.remove('modal-open');
-    document.body.style.overflow = '';
-    document.body.style.paddingRight = '';
-    
-    // Actualizar título del modal
-    const modalTitle = document.getElementById('repuesto-modal-title');
-    if (modalTitle) {
-        modalTitle.innerHTML = repuestoId ? 
-            '<i class="fas fa-edit me-2"></i>Editar Repuesto' : 
-            '<i class="fas fa-plus me-2"></i>Nuevo Repuesto';
-    }
-    
-    // Limpiar formulario
-    document.getElementById('repuesto-id').value = '';
-    document.getElementById('repuesto-sku').value = '';
-    document.getElementById('repuesto-nombre').value = '';
-    document.getElementById('repuesto-categoria').value = '';
-    document.getElementById('repuesto-stock').value = '0';
-    
-    // Si estamos editando, cargar datos del repuesto
-    if (repuestoId && window.repuestosModule) {
-        const repuesto = window.repuestosModule.getRepuestos().find(r => r.id === repuestoId);
-        
-        if (repuesto) {
-            document.getElementById('repuesto-id').value = repuesto.id;
-            document.getElementById('repuesto-sku').value = repuesto.sku;
-            document.getElementById('repuesto-nombre').value = repuesto.nombre;
-            document.getElementById('repuesto-categoria').value = repuesto.categoria || '';
-            document.getElementById('repuesto-stock').value = repuesto.stock || 0;
-        }
-    }
-    
-    // Mostrar el modal
-    const modal = new bootstrap.Modal(repuestoModal);
-    modal.show();
-}
-
-// Guardar repuesto (nuevo o edición)
-async function guardarRepuesto() {
-    try {
-        const repuestoId = document.getElementById('repuesto-id').value;
-        const sku = document.getElementById('repuesto-sku').value;
-        const nombre = document.getElementById('repuesto-nombre').value;
-        const categoria = document.getElementById('repuesto-categoria').value;
-        const stock = parseInt(document.getElementById('repuesto-stock').value) || 0;
-        
-        if (!sku || !nombre) {
-            mostrarAlerta('El SKU y el nombre son obligatorios', 'warning');
-            return;
-        }
-        
-        // Mostrar indicador de carga
-        mostrarSincronizacion('Guardando repuesto...');
-        
-        // Crear objeto de repuesto
-        const repuesto = {
-            id: repuestoId || 'R' + Date.now().toString(36),
-            sku: sku,
-            nombre: nombre,
-            categoria: categoria,
-            stock: stock
-        };
-        
-        // Guardar repuesto
-        if (repuestoId) {
-            // Editar existente
-            await window.repuestosModule.actualizarRepuesto(repuesto);
-            mostrarAlerta('Repuesto actualizado correctamente', 'success');
-        } else {
-            // Añadir nuevo
-            await window.repuestosModule.agregarRepuesto(repuesto);
-            mostrarAlerta('Repuesto creado correctamente', 'success');
-        }
-        
-        // Cerrar modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('repuesto-modal'));
-        modal.hide();
-        
-        // Recargar tabla
-        cargarTablaRepuestos();
-        
-        // Ocultar indicador de carga
-        ocultarSincronizacion();
-        
-    } catch (error) {
-        console.error('Error al guardar repuesto:', error);
-        mostrarAlerta('Error al guardar repuesto: ' + error.message, 'danger');
-        ocultarSincronizacion();
-    }
-}
-
-// Función para editar un repuesto
-function editarRepuesto(repuestoId) {
-    mostrarModalRepuesto(repuestoId);
-}
-
-// Función para confirmar eliminación de un repuesto
-function confirmarEliminarRepuesto(repuestoId) {
-    console.log("Solicitando confirmación para eliminar repuesto:", repuestoId);
-    
-    const repuesto = window.repuestosModule.getRepuestos().find(r => r.id === repuestoId);
-    
-    if (!repuesto) {
-        mostrarAlerta('No se encontró el repuesto a eliminar', 'danger');
-        return;
-    }
-    
-    // Confirmar antes de eliminar
-    if (confirm(`¿Estás seguro de eliminar el repuesto "${repuesto.nombre}" (${repuesto.sku})?`)) {
-        eliminarRepuesto(repuestoId);
-    }
-}
-
-// Función para eliminar un repuesto
-async function eliminarRepuesto(repuestoId) {
-    try {
-        // Mostrar indicador de carga
-        mostrarSincronizacion('Eliminando repuesto...');
-        
-        // Eliminar repuesto
-        await window.repuestosModule.eliminarRepuesto(repuestoId);
-        
-        // Mostrar mensaje de éxito
-        mostrarAlerta('Repuesto eliminado correctamente', 'success');
-        
-        // Recargar tabla
-        cargarTablaRepuestos();
-        
-        // Ocultar indicador de carga
-        ocultarSincronizacion();
-        
-    } catch (error) {
-        console.error('Error al eliminar repuesto:', error);
-        mostrarAlerta('Error al eliminar repuesto: ' + error.message, 'danger');
-        ocultarSincronizacion();
-    }
-}
-
-// Exportar repuestos a CSV
-function exportarRepuestosCSV() {
-    try {
-        const repuestos = window.repuestosModule.getRepuestos();
-        
-        if (repuestos.length === 0) {
-            mostrarAlerta('No hay repuestos para exportar', 'warning');
-            return;
-        }
-        
-        // Crear cabeceras del CSV
-        let csvContent = 'SKU,Nombre,Categoría,Stock\n';
-        
-        // Añadir filas de datos
-        repuestos.forEach(repuesto => {
-            // Escapar comillas y otros caracteres problemáticos
-            const escaparCSV = (texto) => {
-                if (!texto && texto !== 0) return '';
-                return `"${texto.toString().replace(/"/g, '""')}"`;
-            };
-            
-            const fila = [
-                escaparCSV(repuesto.sku),
-                escaparCSV(repuesto.nombre),
-                escaparCSV(repuesto.categoria || ''),
-                escaparCSV(repuesto.stock || 0)
-            ].join(',');
-            
-            csvContent += fila + '\n';
-        });
-        
-        // Crear blob y descargar
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `repuestos_${new Date().toISOString().slice(0,10)}.csv`);
-        link.style.visibility = 'hidden';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        mostrarAlerta('Repuestos exportados correctamente', 'success');
-        
-    } catch (error) {
-        console.error('Error al exportar repuestos:', error);
-        mostrarAlerta('Error al exportar repuestos: ' + error.message, 'danger');
-    }
-}
-
-// Inicializar el módulo al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    // Verificar si estamos en el panel de administración
-    const adminPanel = document.getElementById('admin-panel');
-    if (adminPanel) {
-        // Si el módulo de repuestos está disponible, inicializar
-        if (window.repuestosModule) {
-            initAdminRepuestos();
-        } else {
-            console.warn("Esperando a que se cargue el módulo de repuestos...");
-            // Escuchar el evento personalizado que indica que los repuestos se han cargado
-            document.addEventListener('repuestosCargados', function() {
-                console.log("Repuestos cargados, inicializando panel de administración...");
-                initAdminRepuestos();
-            });
-        }
-    }
-});
-
-// Exponer funciones al ámbito global
+// Exponer las nuevas funciones al ámbito global
 window.adminRepuestos = {
     initAdminRepuestos,
     cargarTablaRepuestos,
     mostrarModalRepuesto,
     editarRepuesto,
     eliminarRepuesto,
-    exportarRepuestosCSV
+    exportarRepuestosCSV,
+    importarRepuestosCSV  // Agregar nueva función
 };
