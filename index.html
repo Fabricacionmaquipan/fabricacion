@@ -158,83 +158,86 @@
         </div>
     </div>
     
-    <!-- Formulario de nueva solicitud -->
-    <div class="collapse show" id="nueva-solicitud-container">
-        <div class="card card-form mb-4">
-            <div class="card-header">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nueva Solicitud</h5>
-                    <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+<!-- Formulario de nueva solicitud -->
+<div class="collapse show" id="nueva-solicitud-container">
+    <div class="card card-form mb-4">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Nueva Solicitud</h5>
+                <button class="btn btn-sm btn-link text-muted p-0" type="button" data-bs-toggle="collapse" data-bs-target="#nueva-solicitud-container">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
-            
-            <div class="card-body">
-                <form id="nueva-solicitud-form">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label for="nota-venta" class="form-label">Nota de Venta</label>
-                            <input type="text" class="form-control" id="nota-venta" placeholder="Ingrese número de nota" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
-                            <input type="date" class="form-control" id="fecha-solicitud" required readonly>
-                            <small class="text-muted">Fecha establecida automáticamente</small>
-                        </div>
-                        <!-- Nuevos campos: Cliente y Local -->
-                        <div class="col-md-6">
-                            <label for="cliente" class="form-label">Cliente</label>
-                            <input type="text" class="form-control" id="cliente" placeholder="Nombre del cliente">
-                        </div>
-                        <div class="col-md-6">
-                            <label for="local" class="form-label">Local</label>
-                            <input type="text" class="form-control" id="local" placeholder="Nombre del local">
-                        </div>
+        </div>
+        
+        <div class="card-body">
+            <form id="nueva-solicitud-form">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="nota-venta" class="form-label">Nota de Venta</label>
+                        <input type="text" class="form-control" id="nota-venta" placeholder="Ingrese número de nota" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="fecha-solicitud" class="form-label">Fecha de Solicitud</label>
+                        <input type="date" class="form-control" id="fecha-solicitud" required readonly>
+                        <small class="text-muted">Fecha establecida automáticamente</small>
+                    </div>
+                    <!-- Campos de Cliente y Local -->
+                    <div class="col-md-6">
+                        <label for="cliente" class="form-label">Cliente</label>
+                        <input type="text" class="form-control" id="cliente" placeholder="Nombre del cliente">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="local" class="form-label">Local</label>
+                        <input type="text" class="form-control" id="local" placeholder="Nombre del local">
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label mb-0">Productos solicitados</label>
+                        <button type="button" class="btn btn-sm btn-primary" id="add-item">
+                            <i class="fas fa-plus me-1"></i> Agregar Producto
+                        </button>
                     </div>
                     
-                    <div class="mt-4">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label class="form-label mb-0">Productos solicitados</label>
-                            <button type="button" class="btn btn-sm btn-primary" id="add-item">
-                                <i class="fas fa-plus me-1"></i> Agregar Producto
-                            </button>
-                        </div>
-                        
-                        <div class="items-container" id="items-container">
-                            <div class="item-row">
-                                <div class="row g-2 align-items-center">
-                                    <!-- Añadir campo SKU antes del nombre del producto -->
-                                    <div class="col-md-3 position-relative">
-                                        <input type="text" class="form-control sku-input" placeholder="SKU" name="sku[]" autocomplete="off">
-                                        <div class="dropdown-menu producto-suggestions"></div>
-                                    </div>
-                                    <div class="col-md-4 position-relative">
-                                        <input type="text" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
-                                        <div class="dropdown-menu producto-suggestions"></div>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <button type="button" class="btn btn-outline-danger w-100 remove-item">
-                                            <i class="fas fa-trash-alt"></i>
-                                        </button>
-                                    </div>
+                    <div class="items-container" id="items-container">
+                        <div class="item-row">
+                            <div class="row g-2 align-items-center">
+                                <!-- Campo SKU -->
+                                <div class="col-md-3 position-relative">
+                                    <input type="text" class="form-control sku-input" placeholder="SKU" name="sku[]" autocomplete="off">
+                                    <div class="dropdown-menu producto-suggestions"></div>
+                                </div>
+                                <!-- Campo Nombre del producto -->
+                                <div class="col-md-4 position-relative">
+                                    <input type="text" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
+                                    <div class="dropdown-menu producto-suggestions"></div>
+                                </div>
+                                <!-- Campo Cantidad -->
+                                <div class="col-md-3">
+                                    <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
+                                </div>
+                                <!-- Botón eliminar item -->
+                                <div class="col-md-2">
+                                    <button type="button" class="btn btn-outline-danger w-100 remove-item">
+                                        <i class="fas fa-trash-alt"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="text-end mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane me-1"></i> Enviar Solicitud
-                        </button>
-                    </div>
-                </form>
-            </div>
+                </div>
+                
+                <div class="text-end mt-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane me-1"></i> Enviar Solicitud
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
     
     <!-- Historial de solicitudes -->
 <div class="collapse show" id="historial-bodega">
