@@ -417,6 +417,9 @@ async function procesarImportacionCSV(file, tieneEncabezados, opcionDuplicados) 
 
 // Inicializar cuando se carga la página
 document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar referencias a elementos DOM
+    tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
+    
     // Inicializar panel principal
     setupAdminListeners();
     setupAdminButtonListeners();
@@ -552,7 +555,7 @@ window.adminRepuestos = {
 // =====================================================
 
 // Elementos DOM compartidos
-const tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
+let tablaSolicitudesAdmin;
 
 // Variables para módulo principal de Admin
 let currentPageAdmin = 1;
