@@ -111,11 +111,189 @@ function setupFabricacionButtonListeners() {
     });
 }
 
+// Función para paginar y filtrar elementos
+function paginateAndFilterItems(items, currentPage, filterTerm, filterStatus, itemsPerPage = 10) {
+    // Filtrar por término de búsqueda si existe
+    let filteredItems = items;
+    
+    if (filterTerm && filterTerm.trim() !== '') {
+        filteredItems = items.filter(item => {
+            // Búsqueda en múltiples campos
+            return (
+                (item.id && item.id.toLowerCase().includes(filterTerm)) ||
+                (item.notaVenta && item.notaVenta.toLowerCase().includes(filterTerm)) ||
+                (item.cliente && item.cliente.toLowerCase().includes(filterTerm)) ||
+                (item.local && item.local.toLowerCase().includes(filterTerm)) ||
+                (item.estado && item.estado.toLowerCase().includes(filterTerm))
+            );
+        });
+    }
+    
+    // Filtrar por estado si existe
+    if (filterStatus && filterStatus !== 'all') {
+        filteredItems = filteredItems.filter(item => {
+            if (filterStatus === 'pendientes') {
+                return item.estado === 'Solicitud enviada por bodega';
+            } else if (filterStatus === 'fabricacion') {
+                return item.estado === 'En fabricación';
+            } else if (filterStatus === 'entregadas') {
+                return item.estado === 'Entregado';
+            }
+            return true;
+        });
+    }
+    
+    // Ordenar por fecha (más recientes primero)
+    filteredItems.sort((a, b) => {
+        return new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud);
+    });
+    
+    // Calcular índices para paginación
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    
+    // Devolver los elementos paginados y el total
+    return {
+        items: filteredItems.slice(startIndex, endIndex),
+        totalItems: filteredItems.length
+    };
+}
+
+// Obtener clase para el badge de estado
+function getStatusBadgeClass(estado) {
+    switch (estado) {
+        case 'Solicitud enviada por bodega':
+            return 'bg-info';
+        case 'En fabricación':
+            return 'bg-warning text-dark';
+        case 'Entregado':
+            return 'bg-success';
+        default:
+            return 'bg-secondary';
+    }
+}
+
+// Formatear fecha para mostrar
+function formatDate(dateString) {
+    if (!dateString) return 'N/A';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString; // Si no es una fecha válida
+    
+    return date.toLocaleDateString('es-CL', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+}
+
+// Crear controles de paginación
+function createPaginationControls(containerSelector, totalItems, currentPage, pageChangeCallback, panelType, itemsPerPage = 10) {
+    const container = document.querySelector(containerSelector);
+    if (!container) return;
+    
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    let html = `
+        <nav aria-label="Paginación" class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+                Mostrando ${Math.min(totalItems, 1 + (currentPage - 1) * itemsPerPage)}-${Math.min(totalItems, currentPage * itemsPerPage)} de ${totalItems} solicitudes
+            </div>
+            <ul class="pagination pagination-sm mb-0">
+    `;
+    
+    // Botón anterior
+    html += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage - 1}" data-panel="${panelType}" aria-label="Anterior">
+                <span aria-hidden="true">&laquo;</span>
+            </a>
+        </li>
+    `;
+    
+    // Números de página
+    const maxPages = 5; // Limitar a 5 números por UX
+    let startPage = Math.max(1, currentPage - Math.floor(maxPages / 2));
+    let endPage = Math.min(totalPages, startPage + maxPages - 1);
+    
+    // Ajustar si no hay suficientes páginas al inicio
+    if (endPage - startPage + 1 < maxPages && startPage > 1) {
+        startPage = Math.max(1, endPage - maxPages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        html += `
+            <li class="page-item ${i === currentPage ? 'active' : ''}">
+                <a class="page-link" href="#" data-page="${i}" data-panel="${panelType}">${i}</a>
+            </li>
+        `;
+    }
+    
+    // Botón siguiente
+    html += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link" href="#" data-page="${currentPage + 1}" data-panel="${panelType}" aria-label="Siguiente">
+                <span aria-hidden="true">&raquo;</span>
+            </a>
+        </li>
+    `;
+    
+    html += `
+            </ul>
+        </nav>
+    `;
+    
+    container.innerHTML = html;
+    
+    // Añadir listener a los botones de paginación
+    const pageLinks = container.querySelectorAll('.page-link');
+    pageLinks.forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            
+            const page = parseInt(link.getAttribute('data-page'));
+            const panel = link.getAttribute('data-panel');
+            
+            if (isNaN(page) || page < 1 || page > totalPages) return;
+            
+            pageChangeCallback(page, panel);
+        });
+    });
+}
+
+// Manejar cambio de página
+function handlePageChange(page, panel) {
+    if (panel === 'fabricacion') {
+        currentPageFabricacion = page;
+        cargarDatosFabricacion();
+    }
+}
+
 // Cargar datos para el panel de Fabricación
 function cargarDatosFabricacion() {
     if (!tablaSolicitudesFabricacion) return;
     
     tablaSolicitudesFabricacion.innerHTML = '';
+    
+    // Verificar si la variable solicitudes existe globalmente
+    if (typeof solicitudes === 'undefined' || !Array.isArray(solicitudes)) {
+        tablaSolicitudesFabricacion.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-exclamation-triangle text-warning mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">Error: No se pudo acceder a los datos de solicitudes</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        console.error('Error: La variable "solicitudes" no está definida o no es un array');
+        return;
+    }
     
     if (solicitudes.length === 0) {
         tablaSolicitudesFabricacion.innerHTML = `
@@ -171,7 +349,7 @@ function cargarDatosFabricacion() {
         }
         
         // Crear ID corto para mejor visualización
-        const idCorto = solicitud.id.substring(solicitud.id.length - 6);
+        const idCorto = solicitud.id ? solicitud.id.substring(Math.max(0, solicitud.id.length - 6)) : 'N/A';
         
         // Obtener fecha estimada
         let fechaEstimada = 'No establecida';
@@ -198,16 +376,17 @@ function cargarDatosFabricacion() {
         const cliente = solicitud.cliente || 'No especificado';
         const local = solicitud.local || 'No especificado';
         
+        // Construir HTML de la fila - ASEGURANDO QUE COINCIDE CON EL ORDEN DE LAS COLUMNAS DEL ENCABEZADO
         tr.innerHTML = `
             <td data-label="ID">${idCorto}</td>
-            <td data-label="Nota Venta">${solicitud.notaVenta}</td>
+            <td data-label="Nota Venta">${solicitud.notaVenta || 'N/A'}</td>
             <td data-label="Cliente">${cliente}</td>
             <td data-label="Local">${local}</td>
             <td data-label="Fecha Solicitud">${formatDate(solicitud.fechaSolicitud)}</td>
             <td data-label="Fecha Estimada">${fechaEstimada}</td>
             <td data-label="Fecha Entrega">${fechaEntrega}</td>
             <td data-label="Estado">
-                <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span>
+                <span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado || 'Sin estado'}</span>
             </td>
             <td data-label="Acciones">
                 <div class="btn-group">
@@ -561,13 +740,13 @@ function generarContenidoGuiaEntrega(solicitud) {
     const local = solicitud.local || 'No especificado';
     
     // Obtener productos
-    const productosHTML = solicitud.items.map(item => `
+    const productosHTML = solicitud.items ? solicitud.items.map(item => `
         <tr>
             <td>${item.sku || '-'}</td>
             <td>${item.producto}</td>
             <td>${item.cantidad}</td>
         </tr>
-    `).join('');
+    `).join('') : '<tr><td colspan="3">No hay productos registrados</td></tr>';
     
     // Crear el HTML para la guía de entrega
     return `
@@ -643,25 +822,3 @@ function generarContenidoGuiaEntrega(solicitud) {
         </div>
     `;
 }
-
-// Asegurarse de que los listeners estén configurados al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOM cargado, inicializando panel de fabricación...");
-    
-    // Actualizar el encabezado de la tabla para incluir todos los campos
-    setTimeout(() => {
-        actualizarEncabezadoTablaFabricacion();
-    }, 500);
-    
-    // Configurar listeners específicos
-    setupFabricacionButtonListeners();
-    
-    // Mensaje indicando que los cambios se han aplicado
-    console.log("Panel de fabricación inicializado correctamente");
-});
-
-// Exponer funciones globalmente
-window.cargarDatosFabricacion = cargarDatosFabricacion;
-window.setupFabricacionListeners = setupFabricacionListeners;
-window.updateFabricacionPagination = updateFabricacionPagination;
-window.generarPDFEntrega = generarPDFEntrega;
