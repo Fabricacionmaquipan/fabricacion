@@ -1,4 +1,4 @@
-// Utilidades globales
+// utils.js - Utilidades globales
 
 // Variables para paginación
 const ITEMS_PER_PAGE = 10; // Solicitudes por página
@@ -7,6 +7,26 @@ const ITEMS_PER_PAGE = 10; // Solicitudes por página
 function mostrarSincronizacion(mensaje, isError = false) {
     const syncStatus = document.getElementById('sync-status');
     const syncMessage = document.getElementById('sync-message');
+    
+    if (!syncStatus || !syncMessage) {
+        // Si no existen los elementos, crear un indicador temporal
+        const tempStatus = document.createElement('div');
+        tempStatus.className = 'alert alert-' + (isError ? 'danger' : 'info') + ' position-fixed';
+        tempStatus.style.top = '20px';
+        tempStatus.style.right = '20px';
+        tempStatus.style.zIndex = '9999';
+        tempStatus.innerHTML = `
+            <div class="d-flex align-items-center">
+                ${!isError ? '<div class="spinner-border spinner-border-sm me-2"></div>' : ''}
+                <span>${mensaje}</span>
+            </div>
+        `;
+        document.body.appendChild(tempStatus);
+        
+        // Guardar referencia para poder eliminarla después
+        window._tempSyncStatus = tempStatus;
+        return;
+    }
     
     syncMessage.textContent = mensaje;
     syncStatus.classList.add('active');
@@ -21,6 +41,17 @@ function mostrarSincronizacion(mensaje, isError = false) {
 // Ocultar estado de sincronización
 function ocultarSincronizacion() {
     const syncStatus = document.getElementById('sync-status');
+    
+    // Si se usó el indicador temporal, eliminarlo
+    if (window._tempSyncStatus) {
+        setTimeout(() => {
+            window._tempSyncStatus.remove();
+            delete window._tempSyncStatus;
+        }, 500);
+        return;
+    }
+    
+    if (!syncStatus) return;
     
     // Animación suave de desaparición
     syncStatus.style.opacity = '0';
@@ -49,30 +80,38 @@ function getStatusBadgeClass(estado) {
 function formatDate(dateString) {
     if (!dateString) return '';
     
-    const parts = dateString.split('-');
-    if (parts.length !== 3) return dateString;
-    
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    try {
+        const parts = dateString.split('-');
+        if (parts.length !== 3) return dateString;
+        
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    } catch (e) {
+        return dateString; // Si hay un error, devolver el string original
+    }
 }
 
 // Formatear fecha y hora
 function formatDateTime(isoString) {
     if (!isoString) return '';
     
-    const date = new Date(isoString);
-    if (isNaN(date.getTime())) return isoString;
-    
-    // Formatear fecha con hora en formato legible
-    const options = { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit',
-        second: '2-digit'
-    };
-    
-    return date.toLocaleString(undefined, options);
+    try {
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return isoString;
+        
+        // Formatear fecha con hora en formato legible
+        const options = { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        };
+        
+        return date.toLocaleString(undefined, options);
+    } catch (e) {
+        return isoString; // Si hay un error, devolver el string original
+    }
 }
 
 // Generar un ID único
@@ -223,12 +262,15 @@ function paginateAndFilterItems(items, currentPage, filterTerm = '', filterStatu
             return (
                 (item.id && item.id.toLowerCase().includes(term)) ||
                 (item.notaVenta && item.notaVenta.toLowerCase().includes(term)) ||
+                (item.cliente && item.cliente.toLowerCase().includes(term)) ||
+                (item.local && item.local.toLowerCase().includes(term)) ||
                 (item.fechaSolicitud && item.fechaSolicitud.includes(term)) ||
                 (item.estado && item.estado.toLowerCase().includes(term)) ||
                 (item.observaciones && item.observaciones.toLowerCase().includes(term)) ||
                 // Buscar en productos
                 (item.items && item.items.some(prod => 
-                    prod.producto && prod.producto.toLowerCase().includes(term)
+                    (prod.producto && prod.producto.toLowerCase().includes(term)) ||
+                    (prod.sku && prod.sku.toLowerCase().includes(term))
                 ))
             );
         });
@@ -265,8 +307,6 @@ function paginateAndFilterItems(items, currentPage, filterTerm = '', filterStatu
 
 // Función para limpiar modales bloqueados
 function limpiarModalesBloqueados() {
-    console.log("Limpiando modales bloqueados");
-    
     // Eliminar todos los backdrops
     const backdrops = document.querySelectorAll('.modal-backdrop');
     backdrops.forEach(backdrop => backdrop.remove());
@@ -295,10 +335,48 @@ function limpiarModalesBloqueados() {
     });
 }
 
+// Handler genérico para manejo de cambios de página
+function handlePageChange(newPage, panelName) {
+    switch (panelName) {
+        case 'bodega':
+            if (typeof currentPageBodega !== 'undefined') {
+                currentPageBodega = newPage;
+                if (typeof cargarDatosBodega === 'function') {
+                    cargarDatosBodega();
+                }
+            }
+            break;
+        case 'fabricacion':
+            if (typeof currentPageFabricacion !== 'undefined') {
+                currentPageFabricacion = newPage;
+                if (typeof cargarDatosFabricacion === 'function') {
+                    cargarDatosFabricacion();
+                }
+            }
+            break;
+        case 'admin':
+            if (typeof currentPageAdmin !== 'undefined') {
+                currentPageAdmin = newPage;
+                if (typeof cargarDatosAdmin === 'function') {
+                    cargarDatosAdmin();
+                }
+            }
+            break;
+        case 'repuestos':
+            if (typeof currentPageRepuestos !== 'undefined') {
+                currentPageRepuestos = newPage;
+                if (typeof cargarTablaRepuestos === 'function') {
+                    cargarTablaRepuestos();
+                }
+            }
+            break;
+    }
+}
+
 // Agregar manejador para tecla ESC global
 document.addEventListener('keydown', function(e) {
     // Si se presiona ESC (código 27)
-    if (e.keyCode === 27) {
+    if (e.keyCode === 27 || e.key === 'Escape') {
         setTimeout(limpiarModalesBloqueados, 300);
     }
 });
@@ -311,11 +389,15 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Exponer función globalmente
+// Exponer funciones globalmente
+window.mostrarSincronizacion = mostrarSincronizacion;
+window.ocultarSincronizacion = ocultarSincronizacion;
+window.getStatusBadgeClass = getStatusBadgeClass;
+window.formatDate = formatDate;
+window.formatDateTime = formatDateTime;
+window.generateUniqueId = generateUniqueId;
+window.mostrarAlerta = mostrarAlerta;
+window.createPaginationControls = createPaginationControls;
+window.paginateAndFilterItems = paginateAndFilterItems;
 window.limpiarModalesBloqueados = limpiarModalesBloqueados;
-
-// Verificar y limpiar modales al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    // Esperar un momento para asegurarse de que todo está cargado
-    setTimeout(limpiarModalesBloqueados, 500);
-});
+window.handlePageChange = handlePageChange;
