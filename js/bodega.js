@@ -113,6 +113,11 @@ function setupBodegaListeners() {
         setupProductoAutocompletado();
     }
     
+    // Configurar autocompletado de repuestos si el módulo está disponible
+    if (window.repuestosModule) {
+        setupRepuestosAutocompletado();
+    }
+    
     // Actualizar encabezado de la tabla para incluir nuevas columnas
     setTimeout(actualizarEncabezadoTablaBodega, 1000);
 }
@@ -421,7 +426,7 @@ async function handleNuevaSolicitud(e) {
 // Agregar un nuevo item al formulario
 function addItem() {
     const newRow = document.createElement('div');
-    newRow.className = 'item-row';
+    newRow.className = 'item-row item-row-new';
     newRow.innerHTML = `
         <div class="row g-2 align-items-center">
             <div class="col-md-3 position-relative">
@@ -468,7 +473,7 @@ function removeItem(button) {
     const items = document.querySelectorAll('.item-row');
     if (items.length > 1) {
         // Animación de eliminación
-        row.style.transition = 'all 0.3s';
+        row.classList.add('item-row-remove');
         row.style.opacity = '0';
         row.style.height = '0';
         
@@ -482,6 +487,34 @@ function removeItem(button) {
 
 // Configurar autocompletado de productos
 function setupProductoAutocompletado() {
+    // Configurar autocompletado para los elementos existentes
+    setupAutocompletadoEnItems();
+    
+    // Observar cambios en el contenedor de items para configurar autocompletado en nuevos elementos
+    const observador = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                setupAutocompletadoEnItems();
+            }
+        });
+    });
+    
+    // Iniciar observación del contenedor
+    if (itemsContainer) {
+        observador.observe(itemsContainer, { childList: true });
+    }
+}
+
+// Configurar autocompletado de repuestos
+function setupRepuestosAutocompletado() {
+    console.log("Configurando autocompletado de repuestos...");
+    
+    // Verificar que el módulo de repuestos esté disponible
+    if (!window.repuestosModule) {
+        console.error("Módulo de repuestos no encontrado. El autocompletado no funcionará.");
+        return;
+    }
+    
     // Configurar autocompletado para los elementos existentes
     setupAutocompletadoEnItems();
     
@@ -535,14 +568,47 @@ function setupSkuInput(input) {
         }
         
         // Buscar productos que coincidan con el SKU
-        const sugerencias = buscarProductosPorSku(sku);
+        let sugerencias = [];
+        
+        // Primero intentar con repuestos si el módulo está disponible
+        if (window.repuestosModule) {
+            sugerencias = window.repuestosModule.filtrarRepuestosPorSku(sku);
+        }
+        
+        // Si no hay suficientes sugerencias, buscar también en productos
+        if (sugerencias.length < 5 && window.productosModule) {
+            const sugerenciasProductos = window.productosModule.filtrarProductos(sku);
+            // Añadir solo las que no estén ya en la lista
+            sugerenciasProductos.forEach(producto => {
+                if (!sugerencias.some(rep => rep.sku === producto.sku)) {
+                    sugerencias.push(producto);
+                }
+            });
+        }
+        
         mostrarSugerencias(suggestionsContainer, sugerencias, this);
     });
     
     // Al hacer clic o presionar Enter en el input
     input.addEventListener('click', function() {
         if (this.value.trim()) {
-            const sugerencias = buscarProductosPorSku(this.value.trim());
+            let sugerencias = [];
+            
+            // Buscar en repuestos primero
+            if (window.repuestosModule) {
+                sugerencias = window.repuestosModule.filtrarRepuestosPorSku(this.value.trim());
+            }
+            
+            // Complementar con productos
+            if (sugerencias.length < 5 && window.productosModule) {
+                const sugerenciasProductos = window.productosModule.filtrarProductos(this.value.trim());
+                sugerenciasProductos.forEach(producto => {
+                    if (!sugerencias.some(rep => rep.sku === producto.sku)) {
+                        sugerencias.push(producto);
+                    }
+                });
+            }
+            
             mostrarSugerencias(suggestionsContainer, sugerencias, this);
         }
     });
@@ -553,15 +619,29 @@ function setupSkuInput(input) {
             suggestionsContainer.classList.remove('show');
             
             const sku = this.value.trim();
-            if (sku && window.productosModule) {
-                const producto = window.productosModule.buscarProductoPorSku(sku);
-                if (producto) {
-                    // Encontrar el input de nombre de producto correspondiente
-                    const itemRow = this.closest('.item-row');
-                    const productoInput = itemRow.querySelector('.producto-input');
-                    if (productoInput) {
-                        productoInput.value = producto.nombre;
-                    }
+            if (!sku) return;
+            
+            let producto = null;
+            
+            // Buscar primero en repuestos
+            if (window.repuestosModule) {
+                producto = window.repuestosModule.buscarRepuestoPorSku(sku);
+            }
+            
+            // Si no se encuentra, buscar en productos
+            if (!producto && window.productosModule) {
+                producto = window.productosModule.buscarProductoPorSku(sku);
+            }
+            
+            if (producto) {
+                // Encontrar el input de nombre de producto correspondiente
+                const itemRow = this.closest('.item-row');
+                const productoInput = itemRow.querySelector('.producto-input');
+                if (productoInput) {
+                    productoInput.value = producto.nombre;
+                    // Añadir clase visual de autocompletado
+                    productoInput.classList.add('autocompleted');
+                    setTimeout(() => productoInput.classList.remove('autocompleted'), 1500);
                 }
             }
         }, 200);
@@ -589,14 +669,47 @@ function setupProductoInput(input) {
         }
         
         // Buscar productos que coincidan con el nombre
-        const sugerencias = buscarProductosPorNombre(nombre);
+        let sugerencias = [];
+        
+        // Primero intentar con repuestos si el módulo está disponible
+        if (window.repuestosModule) {
+            sugerencias = window.repuestosModule.filtrarRepuestosPorNombre(nombre);
+        }
+        
+        // Si no hay suficientes sugerencias, buscar también en productos
+        if (sugerencias.length < 5 && window.productosModule) {
+            const sugerenciasProductos = window.productosModule.filtrarProductos(nombre);
+            // Añadir solo las que no estén ya en la lista
+            sugerenciasProductos.forEach(producto => {
+                if (!sugerencias.some(rep => rep.nombre === producto.nombre)) {
+                    sugerencias.push(producto);
+                }
+            });
+        }
+        
         mostrarSugerencias(suggestionsContainer, sugerencias, this);
     });
     
     // Al hacer clic o presionar Enter en el input
     input.addEventListener('click', function() {
         if (this.value.trim()) {
-            const sugerencias = buscarProductosPorNombre(this.value.trim());
+            let sugerencias = [];
+            
+            // Buscar en repuestos primero
+            if (window.repuestosModule) {
+                sugerencias = window.repuestosModule.filtrarRepuestosPorNombre(this.value.trim());
+            }
+            
+            // Complementar con productos
+            if (sugerencias.length < 5 && window.productosModule) {
+                const sugerenciasProductos = window.productosModule.filtrarProductos(this.value.trim());
+                sugerenciasProductos.forEach(producto => {
+                    if (!sugerencias.some(rep => rep.nombre === producto.nombre)) {
+                        sugerencias.push(producto);
+                    }
+                });
+            }
+            
             mostrarSugerencias(suggestionsContainer, sugerencias, this);
         }
     });
@@ -607,15 +720,29 @@ function setupProductoInput(input) {
             suggestionsContainer.classList.remove('show');
             
             const nombre = this.value.trim();
-            if (nombre && window.productosModule) {
-                const producto = window.productosModule.buscarProductoPorNombre(nombre);
-                if (producto) {
-                    // Encontrar el input de SKU correspondiente
-                    const itemRow = this.closest('.item-row');
-                    const skuInput = itemRow.querySelector('.sku-input');
-                    if (skuInput) {
-                        skuInput.value = producto.sku;
-                    }
+            if (!nombre) return;
+            
+            let producto = null;
+            
+            // Buscar primero en repuestos
+            if (window.repuestosModule) {
+                producto = window.repuestosModule.buscarRepuestoPorNombre(nombre);
+            }
+            
+            // Si no se encuentra, buscar en productos
+            if (!producto && window.productosModule) {
+                producto = window.productosModule.buscarProductoPorNombre(nombre);
+            }
+            
+            if (producto) {
+                // Encontrar el input de SKU correspondiente
+                const itemRow = this.closest('.item-row');
+                const skuInput = itemRow.querySelector('.sku-input');
+                if (skuInput) {
+                    skuInput.value = producto.sku;
+                    // Añadir clase visual de autocompletado
+                    skuInput.classList.add('autocompleted');
+                    setTimeout(() => skuInput.classList.remove('autocompleted'), 1500);
                 }
             }
         }, 200);
@@ -625,26 +752,6 @@ function setupProductoInput(input) {
     input.addEventListener('keydown', function(e) {
         manejarNavegacionTeclado(e, suggestionsContainer, this);
     });
-}
-
-// Buscar productos por SKU
-function buscarProductosPorSku(sku) {
-    if (!window.productosModule) return [];
-    
-    // Filtrar productos que coincidan con el SKU
-    return window.productosModule.getProductos().filter(producto => 
-        producto.sku && producto.sku.toLowerCase().includes(sku.toLowerCase())
-    ).slice(0, 10); // Mostrar solo los primeros 10 resultados
-}
-
-// Buscar productos por nombre
-function buscarProductosPorNombre(nombre) {
-    if (!window.productosModule) return [];
-    
-    // Filtrar productos que coincidan con el nombre
-    return window.productosModule.getProductos().filter(producto => 
-        producto.nombre && producto.nombre.toLowerCase().includes(nombre.toLowerCase())
-    ).slice(0, 10); // Mostrar solo los primeros 10 resultados
 }
 
 // Mostrar sugerencias en el contenedor
@@ -663,9 +770,16 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
     sugerencias.forEach(producto => {
         const item = document.createElement('div');
         item.className = 'producto-suggestion-item';
+        
+        // Añadir clase de categoría si existe (solo para repuestos)
+        if (producto.categoria) {
+            item.classList.add('repuesto-item');
+        }
+        
         item.innerHTML = `
             <div class="suggestion-sku">${producto.sku}</div>
             <div class="suggestion-nombre">${producto.nombre}</div>
+            ${producto.categoria ? `<small class="suggestion-categoria">${producto.categoria}</small>` : ''}
         `;
         
         // Al hacer clic en una sugerencia
@@ -682,6 +796,9 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
                 const productoInput = itemRow.querySelector('.producto-input');
                 if (productoInput) {
                     productoInput.value = producto.nombre;
+                    // Añadir clase visual de autocompletado
+                    productoInput.classList.add('autocompleted');
+                    setTimeout(() => productoInput.classList.remove('autocompleted'), 1500);
                 }
             } else {
                 // Completar input de nombre de producto
@@ -691,6 +808,9 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
                 const skuInput = itemRow.querySelector('.sku-input');
                 if (skuInput) {
                     skuInput.value = producto.sku;
+                    // Añadir clase visual de autocompletado
+                    skuInput.classList.add('autocompleted');
+                    setTimeout(() => skuInput.classList.remove('autocompleted'), 1500);
                 }
             }
             
@@ -784,8 +904,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // También podemos asegurarnos de que los listeners están configurados
     setupBodegaButtonListeners();
     
-    // Configurar autocompletado de productos
+    // Configurar autocompletado de productos si el módulo está disponible
     if (window.productosModule) {
         setupProductoAutocompletado();
+    }
+    
+    // Configurar autocompletado de repuestos si el módulo está disponible
+    if (window.repuestosModule) {
+        setupRepuestosAutocompletado();
     }
 });
