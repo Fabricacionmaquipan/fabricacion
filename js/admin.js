@@ -1,12 +1,32 @@
-// Funciones específicas del panel de administración
+// =====================================================
+// ARCHIVO UNIFICADO: ADMIN + ADMIN-PRODUCTOS + ADMIN-REPUESTOS
+// =====================================================
 
-// Elementos DOM de Admin
+// =====================================================
+// SECCIÓN 1: VARIABLES Y CONFIGURACIÓN GENERAL
+// =====================================================
+
+// Elementos DOM compartidos
 const tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
 
-// Variables para paginación y filtrado
+// Variables para módulo principal de Admin
 let currentPageAdmin = 1;
 let filterTermAdmin = '';
 let filterStatusAdmin = 'all';
+
+// Variables para módulo de Productos
+let tablaProductos;
+let currentPageProductos = 1;
+let filterTermProductos = '';
+
+// Variables para módulo de Repuestos
+let tablaRepuestos;
+let currentPageRepuestos = 1;
+let filterTermRepuestos = '';
+
+// =====================================================
+// SECCIÓN 2: FUNCIONES PRINCIPALES DE ADMINISTRACIÓN
+// =====================================================
 
 // Configurar event listeners específicos de admin
 function setupAdminListeners() {
@@ -345,6 +365,12 @@ function handlePageChange(newPage, panelName) {
     if (panelName === 'admin') {
         currentPageAdmin = newPage;
         cargarDatosAdmin();
+    } else if (panelName === 'productos') {
+        currentPageProductos = newPage;
+        cargarTablaProductos();
+    } else if (panelName === 'repuestos') {
+        currentPageRepuestos = newPage;
+        cargarTablaRepuestos();
     }
 }
 
@@ -587,17 +613,208 @@ function generarEstadisticas() {
     };
 }
 
-// Asegurarse de que los listeners estén configurados al cargar la página
-document.addEventListener('DOMContentLoaded', function() {
-    setupAdminButtonListeners();
-    
-    // Configurar listener para el botón de confirmar eliminación
-    const confirmarEliminacionBtn = document.getElementById('confirmar-eliminacion-btn');
-    if (confirmarEliminacionBtn) {
-        confirmarEliminacionBtn.addEventListener('click', eliminarSolicitud);
-    }
-});
+// =====================================================
+// SECCIÓN 3: FUNCIONES DE ADMINISTRACIÓN DE PRODUCTOS
+// =====================================================
 
-// Exponer funciones globalmente para acceso desde otros scripts
-window.showConfirmarEliminacionModal = showConfirmarEliminacionModal;
-window.eliminarSolicitud = eliminarSolicitud;
+// Inicializar módulo de admin-productos
+function initAdminProductos() {
+    console.log("Inicializando panel de administración de productos...");
+    tablaProductos = document.getElementById('tabla-productos');
+    setupProductosListeners();
+    console.log("Panel de administración de productos inicializado");
+}
+
+// Cargar tabla de productos
+function cargarTablaProductos() {
+    if (!tablaProductos || !window.productosModule) return;
+    
+    // Obtener productos
+    const productosLista = window.productosModule.getProductos();
+    
+    // Filtrar productos
+    let productosFiltrados = productosLista;
+    if (filterTermProductos) {
+        productosFiltrados = productosLista.filter(p => 
+            (p.sku && p.sku.toLowerCase().includes(filterTermProductos)) ||
+            (p.nombre && p.nombre.toLowerCase().includes(filterTermProductos)) ||
+            (p.descripcion && p.descripcion.toLowerCase().includes(filterTermProductos))
+        );
+    }
+    
+    // Paginar productos
+    const ITEMS_PER_PAGE = 10;
+    const startIndex = (currentPageProductos - 1) * ITEMS_PER_PAGE;
+    const productosPaginados = productosFiltrados.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+    const totalItems = productosFiltrados.length;
+    
+    // Limpiar tabla
+    tablaProductos.innerHTML = '';
+    
+    // Verificar si hay productos
+    if (productosPaginados.length === 0) {
+        tablaProductos.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4">
+                    <div class="d-flex flex-column align-items-center">
+                        <i class="fas fa-box-open text-muted mb-2" style="font-size: 2rem;"></i>
+                        <p class="mb-0">No hay productos disponibles</p>
+                        ${filterTermProductos ? '<small class="text-muted">Intenta con otra búsqueda</small>' : ''}
+                    </div>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Mostrar productos
+    productosPaginados.forEach(producto => {
+        const tr = document.createElement('tr');
+        
+        tr.innerHTML = `
+            <td data-label="SKU">${producto.sku}</td>
+            <td data-label="Nombre">${producto.nombre}</td>
+            <td data-label="Descripción">${producto.descripcion || '<span class="text-muted">Sin descripción</span>'}</td>
+            <td data-label="Acciones">
+                <div class="btn-group">
+                    <button class="btn btn-sm btn-warning btn-editar-producto" data-id="${producto.id}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger btn-eliminar-producto" data-id="${producto.id}">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        tablaProductos.appendChild(tr);
+    });
+    
+    // Actualizar paginación
+    createPaginationControls(
+        '#productos-content .card-footer',
+        totalItems,
+        currentPageProductos,
+        handlePageChange,
+        'productos'
+    );
+}
+
+// Configurar listeners para productos
+function setupProductosListeners() {
+    // Implementar según sea necesario
+    console.log("Listeners de productos configurados");
+}
+
+// =====================================================
+// SECCIÓN 4: FUNCIONES DE ADMINISTRACIÓN DE REPUESTOS
+// =====================================================
+
+// Inicializar módulo de admin-repuestos
+function initAdminRepuestos() {
+    console.log("Inicializando panel de administración de repuestos...");
+    
+    // Verificar que el módulo de repuestos esté disponible
+    if (!window.repuestosModule) {
+        console.error("Módulo de repuestos no disponible. La administración de repuestos no funcionará correctamente.");
+        return;
+    }
+    
+    // Añadir pestaña de repuestos al panel de administración
+    agregarPestañaRepuestos();
+    
+    // Configurar listeners
+    setupRepuestosListeners();
+    
+    console.log("Panel de administración de repuestos inicializado");
+}
+
+// Añadir pestaña de repuestos al panel de admin
+function agregarPestañaRepuestos() {
+    console.log("Agregando pestaña de repuestos al panel de administración...");
+    
+    // Obtener el contenedor de pestañas
+    const adminTabs = document.getElementById('adminTabs');
+    const adminTabContent = document.getElementById('adminTabContent');
+    
+    if (!adminTabs || !adminTabContent) {
+        console.error("No se encontraron los contenedores de pestañas de administración");
+        return;
+    }
+    
+    // Añadir pestaña de repuestos
+    const repuestosTab = document.createElement('li');
+    repuestosTab.className = 'nav-item';
+    repuestosTab.setAttribute('role', 'presentation');
+    repuestosTab.innerHTML = `
+        <button class="nav-link" id="repuestos-tab" data-bs-toggle="tab" data-bs-target="#repuestos-content" 
+                type="button" role="tab" aria-controls="repuestos-content" aria-selected="false">
+            <i class="fas fa-tools me-1"></i> Repuestos
+        </button>
+    `;
+    
+    // Insertar después de la pestaña de usuarios
+    const usuariosTab = document.getElementById('usuarios-tab');
+    if (usuariosTab) {
+        adminTabs.insertBefore(repuestosTab, usuariosTab.parentNode.nextSibling);
+    } else {
+        adminTabs.appendChild(repuestosTab);
+    }
+    
+    // Añadir contenido de la pestaña
+    const repuestosContent = document.createElement('div');
+    repuestosContent.className = 'tab-pane fade';
+    repuestosContent.id = 'repuestos-content';
+    repuestosContent.setAttribute('role', 'tabpanel');
+    repuestosContent.setAttribute('aria-labelledby', 'repuestos-tab');
+    
+    repuestosContent.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i>Gestión de Repuestos</h5>
+                    <div class="d-flex gap-2">
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <input type="text" class="form-control" placeholder="Buscar..." id="buscar-repuesto">
+                            <button class="btn btn-outline-secondary" type="button">
+                                <i class="fas fa-search"></i>
+                            </button>
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="btn-nuevo-repuesto">
+                            <i class="fas fa-plus me-1"></i> Nuevo Repuesto
+                        </button>
+                        <button class="btn btn-sm btn-outline-primary" id="btn-importar-repuestos">
+                            <i class="fas fa-file-import me-1"></i> Importar
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" id="btn-exportar-repuestos">
+                            <i class="fas fa-file-export me-1"></i> Exportar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Stock</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-repuestos">
+                        <!-- Se llenará con JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer p-2">
+                <!-- Aquí se insertarán los controles de paginación -->
+            </div>
+        </div>
+    `;
+    
+    adminTabContent.appendChild(repuestosContent);
+    
+    // Actualizar referencia a la tabla de repuestos
+    tablaRepuestos = document.getElementById('tabla-repuestos');
