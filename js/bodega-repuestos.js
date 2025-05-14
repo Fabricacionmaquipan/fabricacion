@@ -42,6 +42,11 @@ function setupAutocompletadoEnItems() {
     skuInputs = document.querySelectorAll('.sku-input');
     productoInputs = document.querySelectorAll('.producto-input');
     
+    // Primero cerrar cualquier menú de sugerencias abierto
+    document.querySelectorAll('.producto-suggestions.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
     // Configurar SKU inputs
     skuInputs.forEach(input => {
         if (!input.dataset.autocompleteSetup) {
@@ -57,6 +62,22 @@ function setupAutocompletadoEnItems() {
             input.dataset.autocompleteSetup = 'true';
         }
     });
+    
+    // Agregar manejador global para cerrar listas al hacer clic fuera
+    if (!window.suggestionClickHandlerAdded) {
+        document.addEventListener('click', function(e) {
+            // Si el clic no fue dentro de un input o de una lista de sugerencias
+            if (!e.target.closest('.sku-input') && 
+                !e.target.closest('.producto-input') && 
+                !e.target.closest('.producto-suggestions')) {
+                // Cerrar todas las listas de sugerencias
+                document.querySelectorAll('.producto-suggestions.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+        window.suggestionClickHandlerAdded = true;
+    }
 }
 
 // Configurar input de SKU
@@ -285,6 +306,9 @@ function mostrarSugerencias(container, sugerencias, inputOrigen, tipo) {
     // Limpiar contenedor
     container.innerHTML = '';
     
+    // Asegurar que el contenedor esté por encima de otros elementos
+    container.style.zIndex = '2000';
+    
     // Crear elementos para cada sugerencia
     sugerencias.forEach((producto, index) => {
         const item = document.createElement('div');
@@ -322,10 +346,25 @@ function posicionarContainerSugerencias(container, input) {
     if (window.innerWidth >= 768) {
         // En desktop, posicionar debajo del input
         container.style.width = input.offsetWidth + 'px';
+        
+        // Asegurar que el contenedor está posicionado correctamente
+        const inputRect = input.getBoundingClientRect();
+        const parentRect = input.parentElement.getBoundingClientRect();
+        
+        // Resetear posiciones y propiedades que puedan interferir
+        container.style.position = 'absolute';
+        container.style.top = '100%';
+        container.style.left = '0';
+        container.style.bottom = 'auto';
+        container.style.right = 'auto';
     } else {
-        // En móviles, usar la posición definida en CSS
-        container.style.width = '';
+        // En móviles, usar la posición definida en CSS para overlay centrado
+        container.style.width = '90%';
+        container.style.maxHeight = '40vh';
     }
+    
+    // Asegurar que el z-index es suficientemente alto
+    container.style.zIndex = '2000';
 }
 
 // Seleccionar una sugerencia
@@ -451,7 +490,44 @@ document.addEventListener('DOMContentLoaded', function() {
             setupRepuestosAutocompletado();
         });
     }
+    
+    // Agregar una hoja de estilos adicional para garantizar la visualización correcta
+    agregarEstilosCorregidos();
 });
+
+// Agregar estilos corregidos para asegurar visualización correcta
+function agregarEstilosCorregidos() {
+    const style = document.createElement('style');
+    style.textContent = `
+        /* Correcciones para el menú desplegable */
+        .producto-suggestions {
+            z-index: 2000 !important;
+            position: absolute !important;
+        }
+        
+        .producto-suggestions.show {
+            display: block !important;
+        }
+        
+        @media (max-width: 767.98px) {
+            .producto-suggestions {
+                position: fixed !important;
+                top: auto !important;
+                bottom: 20% !important;
+                left: 5% !important;
+                right: 5% !important;
+                width: 90% !important;
+            }
+        }
+        
+        /* Asegurar que los contenedores tienen posición relativa */
+        .item-row .col-md-3,
+        .item-row .col-md-4 {
+            position: relative !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
 
 // Exportar funciones al ámbito global
 window.bodegaRepuestos = {
