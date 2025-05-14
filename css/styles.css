@@ -1020,3 +1020,86 @@ h1, h2, h3, h4, h5, h6, .navbar-brand {
         max-width: 20%;
     }
 }
+/* Estilos para la interfaz de carga masiva de repuestos */
+/* Añadir a styles.css o crear un archivo separado */
+
+.import-container {
+    padding: 15px;
+}
+
+.import-instructions {
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.import-instructions ol {
+    padding-left: 20px;
+}
+
+.import-form {
+    background-color: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 15px;
+}
+
+.import-report {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.report-summary {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+    background-color: #fff;
+    padding: 10px;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.report-summary p {
+    margin: 5px 0;
+    flex-basis: 30%;
+}
+
+.error-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.error-table th, 
+.error-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+}
+
+.error-table th {
+    background-color: #f2f2f2;
+}
+
+.error-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.error-table tr:hover {
+    background-color: #f1f1f1;
+}
+
+@media (max-width: 768px) {
+    .report-summary {
+        flex-direction: column;
+    }
+    
+    .report-summary p {
+        flex-basis: 100%;
+    }
+}
