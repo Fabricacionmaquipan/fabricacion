@@ -373,6 +373,11 @@
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
+                       <button class="nav-link" id="repuestos-tab" data-bs-toggle="tab" data-bs-target="#repuestos-content" type="button" role="tab" aria-controls="repuestos-content" aria-selected="false">
+                           <i class="fas fa-tools me-1"></i> Repuestos
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-content" type="button" role="tab" aria-controls="dashboard-content" aria-selected="false">
                             <i class="fas fa-chart-line me-1"></i> Dashboard
                         </button>
@@ -481,6 +486,53 @@
                             </div>
                         </div>
                     </div>
+                    <div class="tab-pane fade" id="repuestos-content" role="tabpanel" aria-labelledby="repuestos-tab">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h5 class="mb-0">Gestión de Repuestos</h5>
+        
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success" id="btn-nuevo-repuesto">
+                <i class="fas fa-plus-circle me-1"></i> Nuevo Repuesto
+            </button>
+            
+            <button class="btn btn-outline-primary" id="btn-carga-masiva">
+                <i class="fas fa-file-import me-1"></i> Importar Repuestos
+            </button>
+            
+            <div class="input-group input-group-sm" style="width: 200px;">
+                <input type="text" class="form-control" id="buscar-repuesto" placeholder="Buscar...">
+                <button class="btn btn-outline-secondary" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>SKU</th>
+                        <th>Nombre</th>
+                        <th>Categoría</th>
+                        <th>Stock</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-repuestos">
+                    <!-- Se llenará con JavaScript -->
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer p-2">
+            <div class="d-flex justify-content-between align-items-center">
+                <div id="repuestos-info" class="text-muted small">Cargando repuestos...</div>
+                <div id="repuestos-pagination"></div>
+            </div>
+        </div>
+    </div>
+</div>
                     
                     <!-- NUEVA SECCIÓN: Tab de Dashboard -->
                     <div class="tab-pane fade" id="dashboard-content" role="tabpanel" aria-labelledby="dashboard-tab">
@@ -846,6 +898,41 @@
             </div>
         </div>
     </div>
+    <div class="modal fade" id="repuesto-modal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="repuesto-modal-title"><i class="fas fa-plus-circle me-2"></i>Nuevo Repuesto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="repuesto-form">
+                    <input type="hidden" id="repuesto-id">
+                    <div class="mb-3">
+                        <label for="repuesto-sku" class="form-label">SKU</label>
+                        <input type="text" class="form-control" id="repuesto-sku" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repuesto-nombre" class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="repuesto-nombre" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="repuesto-categoria" class="form-label">Categoría</label>
+                        <input type="text" class="form-control" id="repuesto-categoria">
+                    </div>
+                    <div class="mb-3">
+                        <label for="repuesto-stock" class="form-label">Stock</label>
+                        <input type="number" class="form-control" id="repuesto-stock" value="0" min="0">
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar Repuesto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Indicador de sincronización -->
     <div class="sync-status" id="sync-status">
