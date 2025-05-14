@@ -1,0 +1,301 @@
+/* repuestos-styles.css - Estilos específicos para la funcionalidad de repuestos */
+
+/* Estilos para dropdown de sugerencias */
+.producto-suggestions {
+    display: none;
+    position: absolute;
+    width: 100%;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    background-color: white;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    margin-top: 2px;
+}
+
+.producto-suggestions.show {
+    display: block;
+}
+
+.producto-suggestion-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.producto-suggestion-item:last-child {
+    border-bottom: none;
+}
+
+.producto-suggestion-item:hover, .producto-suggestion-item.active {
+    background-color: rgba(67, 97, 238, 0.1);
+}
+
+.suggestion-sku {
+    font-weight: bold;
+    font-size: 0.9em;
+    color: #007bff;
+}
+
+.suggestion-nombre {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+
+/* Estilos para la tabla de repuestos en el panel de administración */
+#tabla-repuestos .badge {
+    font-size: 0.85rem;
+    padding: 0.35em 0.65em;
+    border-radius: 0.25rem;
+}
+
+/* Animación al añadir o eliminar repuestos */
+.item-row-new {
+    animation: fadeInDown 0.5s;
+}
+
+.item-row-remove {
+    animation: fadeOutUp 0.3s;
+}
+
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOutUp {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+/* Mejorar visual del formulario en bodega */
+.item-row {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.item-row .row {
+    position: relative;
+    z-index: 1;
+}
+
+.item-row:hover {
+    background-color: rgba(67, 97, 238, 0.05);
+}
+
+/* Resaltar campos cuando se autocompletan */
+.sku-input.autocompleted, .producto-input.autocompleted {
+    background-color: rgba(46, 204, 113, 0.1);
+    border-color: #2ecc71;
+    transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* Ajustes responsivos para móviles */
+@media (max-width: 767.98px) {
+    .producto-suggestions {
+        position: fixed;
+        top: auto;
+        left: 0;
+        right: 0;
+        max-height: 200px;
+        z-index: 1050;
+        margin: 0;
+        border-radius: 0;
+    }
+    
+    .item-row {
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+    
+    .item-row .col-md-2,
+    .item-row .col-md-3,
+    .item-row .col-md-4 {
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Estilos para la categoría de repuestos */
+.categoria-badge {
+    display: inline-block;
+    padding: 0.25em 0.6em;
+    font-size: 0.75em;
+    font-weight: 500;
+    color: #fff;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: 0.25rem;
+    background-color: #6c757d;
+}
+
+/* Colores específicos para categorías */
+.categoria-tornillos { background-color: #007bff; }
+.categoria-tuercas { background-color: #6610f2; }
+.categoria-arandelas { background-color: #6f42c1; }
+.categoria-pasadores { background-color: #e83e8c; }
+.categoria-rodamientos { background-color: #dc3545; }
+.categoria-transmision { background-color: #fd7e14; }
+.categoria-filtros { background-color: #ffc107; color: #212529; }
+.categoria-juntas { background-color: #28a745; }
+.categoria-embrague { background-color: #20c997; }
+.categoria-refrigeracion { background-color: #17a2b8; }
+.categoria-suspension { background-color: #6c757d; }
+.categoria-frenos { background-color: #343a40; }
+.categoria-encendido { background-color: #f06292; }
+.categoria-electrico { background-color: #5c6bc0; }
+.categoria-otros { background-color: #78909c; }
+
+/* Mejoras para el modal de repuestos */
+#repuesto-modal .modal-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+#repuesto-modal .form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+#repuesto-modal .form-text {
+    font-size: 0.8rem;
+}
+
+/* Mejora visual para repuestos con stock bajo */
+.stock-bajo {
+    color: #dc3545;
+    font-weight: 500;
+}
+
+.stock-normal {
+    color: #ffc107;
+}
+
+.stock-alto {
+    color: #28a745;
+}
+
+/* Mejora para SKU en tablas */
+.sku-code {
+    font-family: monospace;
+    font-size: 0.9rem;
+    color: #6610f2;
+    background-color: rgba(102, 16, 242, 0.1);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.2rem;
+}
+
+/* Estilos para mensajes de información en el formulario */
+.item-info {
+    display: none;
+    position: absolute;
+    right: -5px;
+    top: -5px;
+    background-color: #2ecc71;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 20px;
+    font-size: 12px;
+    z-index: 2;
+}
+
+.item-row:hover .item-info {
+    display: block;
+}
+
+/* Animación para mejoras de UX */
+.pulse {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(67, 97, 238, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(67, 97, 238, 0);
+    }
+}
+
+/* Mejora en el diseño de las tarjetas de productos */
+.product-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.product-card-header {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.product-card-body {
+    padding: 1rem;
+}
+
+.product-card-footer {
+    padding: 1rem;
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+}
+
+/* Tooltip personalizado para mostrar información de stock */
+.stock-tooltip {
+    position: relative;
+    display: inline-block;
+}
+
+.stock-tooltip:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    z-index: 1000;
+}
+
+.stock-tooltip:hover::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: transparent transparent rgba(0, 0, 0, 0.8) transparent;
+    z-index: 1000;
+}
