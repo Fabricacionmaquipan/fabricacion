@@ -5,55 +5,49 @@ const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
 const itemsContainer = document.getElementById('items-container');
 const addItemBtn = document.getElementById('add-item');
 const tablaSolicitudesBodega = document.getElementById('tabla-solicitudes-bodega');
+// Asegúrate que el campo de observaciones tenga un ID si quieres accederlo aquí
+// const observacionesBodegaInput = document.getElementById('observaciones-bodega');
+
 
 // Variables para paginación y filtrado
 let currentPageBodega = 1;
 let filterTermBodega = '';
-let filterStatusBodega = 'all'; // Valor inicial para mostrar todas
+let filterStatusBodega = 'all';
 
 // Función para establecer la fecha actual en el formulario
 function setFechaActual() {
     const fechaInput = document.getElementById('fecha-solicitud');
     if (fechaInput) {
         const hoy = new Date();
-        const año = hoy.getFullYear();
-        const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-        const dia = String(hoy.getDate()).padStart(2, '0');
-        const fechaFormateada = `${año}-${mes}-${dia}`;
-        fechaInput.value = fechaFormateada;
-        fechaInput.setAttribute('readonly', 'readonly'); // Hacerlo solo lectura es una buena práctica para la fecha de solicitud
+        // Formato YYYY-MM-DD para el input type="date"
+        fechaInput.value = hoy.getFullYear() + '-' +
+                           String(hoy.getMonth() + 1).padStart(2, '0') + '-' +
+                           String(hoy.getDate()).padStart(2, '0');
+        fechaInput.setAttribute('readonly', 'readonly');
     }
 }
 
 // Configurar event listeners específicos de bodega
 function setupBodegaListeners() {
     if (nuevaSolicitudForm) {
-        // El event listener principal para el submit del formulario
-        // ahora está en app.js (handleNuevaSolicitudConUsuario)
-        // para asegurar que se incluye la información del usuario.
-        // Si handleNuevaSolicitud en bodega.js aún se necesita como fallback
-        // o para alguna lógica específica previa, se puede mantener,
-        // pero la creación final la hará app.js.
-        // nuevaSolicitudForm.addEventListener('submit', handleNuevaSolicitud); // Podría ser redundante
-
-        // Establecer fecha actual cuando el formulario se vuelve visible o se interactúa con él
-        setFechaActual(); // Asegurar que la fecha esté al cargar los listeners
+        // El listener principal para 'submit' está en app.js (handleNuevaSolicitudConUsuario)
+        // para centralizar la lógica de creación con el usuario actual.
+        // Aquí solo nos aseguramos que la fecha se ponga al interactuar.
+        setFechaActual();
     }
 
     if (addItemBtn) {
         addItemBtn.addEventListener('click', addItem);
     }
 
-    // Evento delegado para remover items
-    if (itemsContainer) { // Verificar que itemsContainer existe
-        itemsContainer.addEventListener('click', (e) => { // Más eficiente adjuntar al contenedor
+    if (itemsContainer) {
+        itemsContainer.addEventListener('click', (e) => {
             const removeButton = e.target.closest('.remove-item');
             if (removeButton) {
                 removeItem(removeButton);
             }
         });
     }
-
 
     const buscarInput = document.getElementById('buscar-solicitud-bodega');
     if (buscarInput) {
@@ -64,9 +58,9 @@ function setupBodegaListeners() {
         });
     }
 
-    const btnNuevaSolicitud = document.querySelector('[data-bs-target="#nueva-solicitud-container"]');
-    if (btnNuevaSolicitud) {
-        btnNuevaSolicitud.addEventListener('click', setFechaActual);
+    const btnNuevaSolicitudToggle = document.querySelector('[data-bs-target="#nueva-solicitud-container"]');
+    if (btnNuevaSolicitudToggle) {
+        btnNuevaSolicitudToggle.addEventListener('click', setFechaActual);
     }
 
     const filtroDropdownItems = document.querySelectorAll('#bodega-panel .dropdown-item');
@@ -76,159 +70,127 @@ function setupBodegaListeners() {
                 e.preventDefault();
                 filtroDropdownItems.forEach(el => el.classList.remove('active'));
                 this.classList.add('active');
-
                 const filterText = this.textContent.trim().toLowerCase();
-                const filterButton = this.closest('.dropdown').querySelector('.dropdown-toggle'); // Más robusto
+                const filterButton = this.closest('.dropdown').querySelector('.dropdown-toggle');
 
                 switch (filterText) {
-                    case 'pendientes':
-                        filterStatusBodega = 'pendientes';
-                        if(filterButton) filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> Pendientes`;
-                        break;
-                    case 'en fabricación':
-                        filterStatusBodega = 'fabricacion';
-                         if(filterButton) filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> En Fabricación`;
-                        break;
-                    case 'entregadas':
-                        filterStatusBodega = 'entregadas';
-                        if(filterButton) filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> Entregadas`;
-                        break;
-                    default: // "Todas"
-                        filterStatusBodega = 'all';
-                        if(filterButton) filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> Todas`;
+                    case 'pendientes': filterStatusBodega = 'pendientes'; break;
+                    case 'en fabricación': filterStatusBodega = 'fabricacion'; break;
+                    case 'entregadas': filterStatusBodega = 'entregadas'; break;
+                    default: filterStatusBodega = 'all';
                 }
+                if(filterButton) filterButton.innerHTML = `<i class="fas fa-filter me-1"></i> ${this.textContent.trim()}`;
                 currentPageBodega = 1;
                 cargarDatosBodega();
             });
         });
     }
 
-    setupBodegaButtonListeners();
+    setupBodegaButtonListeners(); // Para botones de detalle en la tabla
 
-    if (typeof window.productosModule !== 'undefined') { // Verificar si productosModule existe
-        setupProductoAutocompletado();
+    // Autocompletado (asegúrate que los módulos base estén listos)
+    if (typeof setupAutocompletadoEnItems === 'function') { // Esta función ahora vive en bodega.js
+        // Configurar para items existentes al inicio y observar nuevos
+        setupAutocompletadoEnItems();
+        if (itemsContainer) {
+            const observador = new MutationObserver(mutations => {
+                mutations.forEach(mutation => {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        mutation.addedNodes.forEach(node => {
+                            if (node.nodeType === 1 && node.classList.contains('item-row')) {
+                                setupAutocompletadoEnItems(node); // Configurar solo para la nueva fila
+                            }
+                        });
+                    }
+                });
+            });
+            observador.observe(itemsContainer, { childList: true });
+        }
     }
-
-    if (typeof window.repuestosModule !== 'undefined') { // Verificar si repuestosModule existe
-        setupRepuestosAutocompletado();
-    }
-
-    // La actualización del encabezado se hará una vez después de que el DOM esté listo.
-    // No es necesario aquí si ya se hace en DOMContentLoaded
 }
 
-// Configurar listeners específicos para los botones de acción en la tabla
 function setupBodegaButtonListeners() {
     if (tablaSolicitudesBodega) {
         tablaSolicitudesBodega.addEventListener('click', (e) => {
-            const targetButton = e.target.closest('.btn-detalle'); // Más eficiente
+            const targetButton = e.target.closest('.btn-detalle');
             if (targetButton) {
-                e.preventDefault(); // Prevenir comportamiento por defecto si es un <a> o similar
+                e.preventDefault();
                 const solicitudId = targetButton.getAttribute('data-id');
-                console.log("Botón detalle bodega clickeado, ID:", solicitudId);
-                if (solicitudId && typeof window.showDetalleSolicitud === 'function') {
+                if (solicitudId && typeof window.showDetalleSolicitud === 'function') { // De modals.js
                     window.showDetalleSolicitud(solicitudId);
                 } else {
-                    console.error("No se pudo mostrar el detalle. ID:", solicitudId, "Función showDetalleSolicitud disponible:", typeof window.showDetalleSolicitud);
+                    console.error("BODEGA.JS: No se pudo mostrar detalle. ID:", solicitudId);
                 }
             }
         });
     } else {
-        console.warn("No se encontró la tabla de solicitudes de bodega ('tabla-solicitudes-bodega') para configurar listeners de botones.");
+        console.warn("BODEGA.JS: Tabla 'tabla-solicitudes-bodega' no encontrada.");
     }
 }
 
-// Cargar y mostrar datos en la tabla de bodega
 function cargarDatosBodega() {
     if (!tablaSolicitudesBodega) {
-        console.warn("Elemento 'tabla-solicitudes-bodega' no encontrado. No se pueden cargar los datos.");
+        console.warn("BODEGA.JS: Elemento 'tabla-solicitudes-bodega' no encontrado.");
         return;
     }
+    tablaSolicitudesBodega.innerHTML = '';
 
-    tablaSolicitudesBodega.innerHTML = ''; // Limpiar antes de cargar
-
-    // Asegurarse que 'solicitudes' (variable global de app.js) y 'paginateAndFilterItems' (de utils.js) estén disponibles
     if (typeof solicitudes === 'undefined' || typeof paginateAndFilterItems !== 'function') {
-        console.error("Variables 'solicitudes' o función 'paginateAndFilterItems' no disponibles.");
+        console.error("BODEGA.JS: 'solicitudes' o 'paginateAndFilterItems' no disponibles.");
         tablaSolicitudesBodega.innerHTML = `<tr><td colspan="9" class="text-center py-4 text-danger">Error al cargar datos.</td></tr>`;
         updateBodegaPagination(0);
         return;
     }
 
-    if (solicitudes.length === 0) {
-        tablaSolicitudesBodega.innerHTML = `
-            <tr><td colspan="9" class="text-center py-4">
-                <div class="d-flex flex-column align-items-center">
-                    <i class="fas fa-inbox text-muted mb-2" style="font-size: 2rem;"></i>
-                    <p class="mb-0">No hay solicitudes registradas</p>
-                </div>
-            </td></tr>`;
-        updateBodegaPagination(0);
-        return;
-    }
-
+    console.log("BODEGA.JS: Cargando datos bodega. Total solicitudes global:", solicitudes.length, "Filtros:", { term: filterTermBodega, status: filterStatusBodega });
     const { items: solicitudesPaginadas, totalItems } = paginateAndFilterItems(
-        solicitudes,
+        [...solicitudes], // Pasar una copia para no afectar el array global con el sort interno de paginateAndFilterItems
         currentPageBodega,
         filterTermBodega,
         filterStatusBodega
     );
+    console.log("BODEGA.JS: Solicitudes paginadas:", solicitudesPaginadas.length, "Total filtradas:", totalItems);
 
     updateBodegaPagination(totalItems);
 
-    if (solicitudesPaginadas.length === 0) {
-        tablaSolicitudesBodega.innerHTML = `
-            <tr><td colspan="9" class="text-center py-4">
-                <div class="d-flex flex-column align-items-center">
-                    <i class="fas fa-search text-muted mb-2" style="font-size: 2rem;"></i>
-                    <p class="mb-0">No se encontraron solicitudes con los filtros aplicados</p>
-                </div>
-            </td></tr>`;
+    if (totalItems === 0 && solicitudes.length > 0) { // Hay solicitudes pero ninguna coincide con el filtro
+        tablaSolicitudesBodega.innerHTML = `<tr><td colspan="9" class="text-center py-4">No se encontraron solicitudes con los filtros aplicados.</td></tr>`;
         return;
     }
+    if (solicitudes.length === 0) { // No hay ninguna solicitud en el sistema
+        tablaSolicitudesBodega.innerHTML = `<tr><td colspan="9" class="text-center py-4">No hay solicitudes registradas.</td></tr>`;
+        return;
+    }
+
 
     solicitudesPaginadas.forEach(solicitud => {
         const tr = document.createElement('tr');
         if (solicitud.estado === 'Entregado') tr.classList.add('table-success');
         else if (solicitud.estado === 'En fabricación') tr.classList.add('table-warning');
 
-        // --- CAMBIO PARA MOSTRAR ID COMPLETO ---
-        // const idCorto = solicitud.id.substring(solicitud.id.length - 6); // Ya no es necesario si el nuevo ID es legible
-        const idParaMostrar = solicitud.id; // Mostrar el ID completo generado por generarIdSolicitud()
-        // --- FIN DEL CAMBIO ---
+        // USAR EL ID COMPLETO
+        const idParaMostrar = solicitud.id || 'N/A';
 
-        let fechaEstimada = 'No establecida';
-        if (solicitud.fechaEstimada && typeof formatDate === 'function') {
-            fechaEstimada = formatDate(solicitud.fechaEstimada);
-        } else if (solicitud.fechaEstimada) {
-            fechaEstimada = solicitud.fechaEstimada; // Fallback si formatDate no está
-        }
-
+        const fechaEstimada = solicitud.fechaEstimada ? formatDate(solicitud.fechaEstimada) : 'No establecida';
         let fechaEntrega = 'Pendiente';
-        if (solicitud.fechaEntrega && typeof formatDate === 'function') {
+        if (solicitud.fechaEntrega) {
             fechaEntrega = formatDate(solicitud.fechaEntrega);
-        } else if (solicitud.fechaEntrega) {
-            fechaEntrega = solicitud.fechaEntrega; // Fallback
         } else if (solicitud.estado === 'Entregado' && solicitud.historial) {
             const entregaHistorial = [...solicitud.historial].reverse().find(h => h.estado === 'Entregado' && h.fechaEntrega);
             if (entregaHistorial && entregaHistorial.fechaEntrega) {
-                fechaEntrega = typeof formatDate === 'function' ? formatDate(entregaHistorial.fechaEntrega) : entregaHistorial.fechaEntrega;
+                fechaEntrega = formatDate(entregaHistorial.fechaEntrega);
             }
         }
-        
-        // Asegurarse que formatDate y getStatusBadgeClass están disponibles
-        const formattedFechaSolicitud = typeof formatDate === 'function' ? formatDate(solicitud.fechaSolicitud) : solicitud.fechaSolicitud;
-        const badgeClass = typeof getStatusBadgeClass === 'function' ? getStatusBadgeClass(solicitud.estado) : 'bg-secondary';
 
         tr.innerHTML = `
             <td data-label="ID">${idParaMostrar}</td>
             <td data-label="Nota Venta">${solicitud.notaVenta || ''}</td>
-            <td data-label="Cliente">${solicitud.cliente || 'No especificado'}</td>
-            <td data-label="Local">${solicitud.local || 'No especificado'}</td>
-            <td data-label="Fecha Solicitud">${formattedFechaSolicitud}</td>
+            <td data-label="Cliente">${solicitud.cliente || 'N/A'}</td>
+            <td data-label="Local">${solicitud.local || 'N/A'}</td>
+            <td data-label="Fecha Solicitud">${formatDate(solicitud.fechaSolicitud)}</td>
             <td data-label="Fecha Estimada">${fechaEstimada}</td>
             <td data-label="Fecha Entrega">${fechaEntrega}</td>
-            <td data-label="Estado"><span class="badge ${badgeClass}">${solicitud.estado}</span></td>
+            <td data-label="Estado"><span class="badge ${getStatusBadgeClass(solicitud.estado)}">${solicitud.estado}</span></td>
             <td data-label="Acciones">
                 <button class="btn btn-sm btn-primary btn-detalle" data-id="${solicitud.id}">
                     <i class="fas fa-eye me-1"></i>Detalles
@@ -239,206 +201,108 @@ function cargarDatosBodega() {
     });
 }
 
-// Actualizar encabezado para incluir ambas fechas (se llama una vez al cargar el DOM)
 function actualizarEncabezadoTablaBodega() {
     const tablaBodegaTheadTr = document.querySelector('#bodega-panel table thead tr');
     if (tablaBodegaTheadTr) {
         tablaBodegaTheadTr.innerHTML = `
-            <th>ID</th>
-            <th>Nota Venta</th>
-            <th>Cliente</th>
-            <th>Local</th>
-            <th>Fecha Solicitud</th>
-            <th>Fecha Estimada</th>
-            <th>Fecha Entrega</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th>ID</th><th>Nota Venta</th><th>Cliente</th><th>Local</th>
+            <th>Fecha Solicitud</th><th>Fecha Estimada</th><th>Fecha Entrega</th>
+            <th>Estado</th><th>Acciones</th>
         `;
-    } else {
-        console.warn("No se encontró el encabezado de la tabla de bodega para actualizar.");
     }
 }
 
-// Actualizar controles de paginación para bodega
 function updateBodegaPagination(totalItems) {
     if (typeof createPaginationControls === 'function') {
         createPaginationControls(
-            '#bodega-panel .card-footer', // Selector del contenedor de paginación
+            '#bodega-panel .card-footer',
             totalItems,
             currentPageBodega,
-            window.handlePageChange, // Usar la función global de app.js
-            'bodega' // Nombre del panel para handlePageChange
+            window.handlePageChange, // Usar la global de app.js
+            'bodega'
         );
-    } else {
-        console.warn("Función createPaginationControls no disponible (de utils.js). La paginación no funcionará.");
     }
 }
 
-// Manejar el envío del formulario de nueva solicitud
-// Esta función ahora podría ser un fallback o lógica previa,
-// ya que app.js/handleNuevaSolicitudConUsuario toma precedencia
-// para la creación y guardado en Firebase.
-async function handleNuevaSolicitud(e) {
-    e.preventDefault();
-    console.log("handleNuevaSolicitud en bodega.js llamado. La creación principal debería ocurrir en app.js.");
+// handleNuevaSolicitud ahora es manejada principalmente por app.js/handleNuevaSolicitudConUsuario
+// Esta función en bodega.js podría eliminarse o usarse solo para validaciones de UI previas si fuera necesario.
+// async function handleNuevaSolicitud(e) {
+//     e.preventDefault();
+//     console.log("BODEGA.JS: handleNuevaSolicitud llamada, pero la creación principal es en app.js.");
+//     // La lógica de recolección de datos y envío a Firebase está en app.js/handleNuevaSolicitudConUsuario
+//     // para incluir el currentUser.
+// }
 
-    // Aquí podrías poner validaciones específicas de bodega ANTES de que app.js tome el control,
-    // pero la lógica de creación del objeto y guardado en Firebase está centralizada en app.js.
-
-    // Ejemplo: asegurar que la fecha esté seteada.
-    setFechaActual();
-
-    // Mostrar una alerta indicando que el proceso continúa en el módulo principal
-    // if (typeof mostrarAlerta === 'function') {
-    //     mostrarAlerta('Procesando solicitud...', 'info');
-    // }
-
-    // NO crear ni guardar la solicitud aquí si app.js lo va a hacer.
-    // Si necesitas que esta función cree la solicitud de forma independiente
-    // (por ejemplo, si app.js no siempre maneja este evento),
-    // entonces debes replicar aquí la lógica de:
-    // 1. Obtener currentUser.
-    // 2. Llamar a generarIdSolicitud().
-    // 3. Construir el objeto nuevaSolicitud completo (incluyendo cliente, local, items con SKU).
-    // 4. Guardar en Firebase.
-    // Pero esto llevaría a duplicación de código. Es mejor que app.js sea el único responsable.
-}
-
-
-// Agregar un nuevo item al formulario
 function addItem() {
-    if (!itemsContainer) {
-        console.error("Elemento 'items-container' no encontrado.");
-        return;
-    }
+    if (!itemsContainer) return;
     const newRow = document.createElement('div');
-    newRow.className = 'item-row item-row-new'; // Clase para animación
-    // Estructura consistente con la recolección de datos en app.js
+    newRow.className = 'item-row item-row-new mb-2'; // Agregado mb-2 para separación
     newRow.innerHTML = `
-        <div class="row g-2 align-items-center mb-2">
+        <div class="row g-2 align-items-center">
             <div class="col-md-3 col-sm-12 position-relative">
-                <label class="form-label visually-hidden">SKU</label>
-                <input type="text" class="form-control sku-input" placeholder="SKU (Opcional)" name="sku[]" autocomplete="off">
+                <label for="sku-${Date.now()}" class="form-label visually-hidden">SKU</label>
+                <input type="text" id="sku-${Date.now()}" class="form-control sku-input" placeholder="SKU (Opcional)" name="sku[]" autocomplete="off">
                 <div class="dropdown-menu producto-suggestions"></div>
             </div>
             <div class="col-md-4 col-sm-12 position-relative">
-                <label class="form-label visually-hidden">Nombre del producto</label>
-                <input type="text" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
+                <label for="producto-${Date.now()}" class="form-label visually-hidden">Nombre del producto</label>
+                <input type="text" id="producto-${Date.now()}" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
                 <div class="dropdown-menu producto-suggestions"></div>
             </div>
             <div class="col-md-3 col-sm-8">
-                <label class="form-label visually-hidden">Cantidad</label>
-                <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" min="1" required>
+                 <label for="cantidad-${Date.now()}" class="form-label visually-hidden">Cantidad</label>
+                <input type="number" id="cantidad-${Date.now()}" class="form-control" placeholder="Cantidad" name="cantidad[]" min="1" required>
             </div>
-            <div class="col-md-2 col-sm-4">
+            <div class="col-md-2 col-sm-4 d-flex align-items-end">
                 <button type="button" class="btn btn-outline-danger w-100 remove-item" aria-label="Eliminar producto">
-                    <i class="fas fa-trash-alt"></i> <span class="d-md-none">Eliminar</span>
+                    <i class="fas fa-trash-alt"></i> <span class="d-none d-md-inline">Eliminar</span>
                 </button>
             </div>
         </div>
     `;
-
     itemsContainer.appendChild(newRow);
-
-    // Re-configurar autocompletado para los nuevos inputs si las funciones están disponibles
-    if (typeof setupAutocompletadoEnItems === 'function') {
-        setupAutocompletadoEnItems(); // Llama a la función que configura ambos tipos de input
-    }
-
-
-    if (window.innerWidth < 768) {
-        newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (typeof setupAutocompletadoEnItems === 'function') setupAutocompletadoEnItems(newRow);
 
     const productoInput = newRow.querySelector('.producto-input');
-    if (productoInput) {
-        setTimeout(() => productoInput.focus(), 100);
-    }
+    if (productoInput) setTimeout(() => productoInput.focus(), 50);
 }
 
-// Eliminar un item del formulario
 function removeItem(button) {
     const row = button.closest('.item-row');
-    if (!row) return;
-
-    const items = itemsContainer.querySelectorAll('.item-row');
-    if (items.length > 1) {
-        row.classList.add('item-row-remove'); // Para animación CSS
-        // Esperar que la animación termine antes de remover el elemento
-        row.addEventListener('animationend', () => row.remove(), { once: true });
-        row.addEventListener('transitionend', () => row.remove(), { once: true }); // Fallback por si no hay anim
-         setTimeout(() => { // Fallback si no hay eventos de transición/animación
-            if (row.parentNode) {
-                row.remove();
-            }
-        }, 300);
-
-
+    if (!row || !itemsContainer) return;
+    if (itemsContainer.querySelectorAll('.item-row').length > 1) {
+        row.style.transition = 'opacity 0.3s ease, height 0.3s ease, margin 0.3s ease, padding 0.3s ease';
+        row.style.opacity = '0';
+        row.style.height = '0';
+        row.style.marginTop = '0';
+        row.style.marginBottom = '0';
+        row.style.paddingTop = '0';
+        row.style.paddingBottom = '0';
+        setTimeout(() => { if(row.parentNode) row.remove(); }, 300);
     } else {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Debe haber al menos un producto en la solicitud.', 'warning');
-        else alert('Debe haber al menos un producto.');
+        if (typeof mostrarAlerta === 'function') mostrarAlerta('Debe haber al menos un producto.', 'warning');
     }
 }
 
+// --- LÓGICA DE AUTOCOMPLETADO ---
+function setupAutocompletadoEnItems(scopeElement = document) {
+    // Si se pasa un elemento (como una nueva fila), buscar solo dentro de él.
+    // Sino, buscar en todo el documento (para la carga inicial).
+    const currentScope = scopeElement === document ? itemsContainer : scopeElement;
+    if(!currentScope) return;
 
-// --- LÓGICA DE AUTOCOMPLETADO (Movida aquí para mantener bodega.js más autocontenido si es necesario) ---
-// (Asegúrate que window.productosModule y window.repuestosModule estén disponibles globalmente)
 
-function setupProductoAutocompletado() {
-    if (typeof setupAutocompletadoEnItems === 'function') setupAutocompletadoEnItems();
-    if (itemsContainer) { // Observar si se añaden nuevas filas de items
-        const observador = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                    mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1 && node.classList.contains('item-row')) {
-                             if (typeof setupAutocompletadoEnItems === 'function') setupAutocompletadoEnItems(node);
-                        }
-                    });
-                }
-            });
-        });
-        observador.observe(itemsContainer, { childList: true });
-    }
-}
-function setupRepuestosAutocompletado() { // Similar a productos, pero podría tener lógica diferente
-    if (typeof setupAutocompletadoEnItems === 'function') setupAutocompletadoEnItems();
-     if (itemsContainer) {
-        const observador = new MutationObserver(mutations => {
-            mutations.forEach(mutation => {
-                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                     mutation.addedNodes.forEach(node => {
-                        if (node.nodeType === 1 && node.classList.contains('item-row')) {
-                             if (typeof setupAutocompletadoEnItems === 'function') setupAutocompletadoEnItems(node);
-                        }
-                    });
-                }
-            });
-        });
-        observador.observe(itemsContainer, { childList: true });
-    }
-}
-
-// Configurar autocompletado en inputs de una fila específica o en todos
-function setupAutocompletadoEnItems(specificRow = null) {
-    const scope = specificRow || document; // Si se pasa una fila, buscar solo dentro de ella
-
-    scope.querySelectorAll('.sku-input').forEach(input => {
-        if (!input.dataset.autocompleteSetup) { // Evitar re-adjuntar listeners
-            if (typeof setupSkuInput === 'function') setupSkuInput(input);
-            input.dataset.autocompleteSetup = 'true';
-        }
+    currentScope.querySelectorAll('.sku-input:not([data-autocomplete-setup="true"])').forEach(input => {
+        setupSkuInputListeners(input);
+        input.dataset.autocompleteSetup = 'true';
     });
-    scope.querySelectorAll('.producto-input').forEach(input => {
-        if (!input.dataset.autocompleteSetup) {
-            if (typeof setupProductoInput === 'function') setupProductoInput(input);
-            input.dataset.autocompleteSetup = 'true';
-        }
+    currentScope.querySelectorAll('.producto-input:not([data-autocomplete-setup="true"])').forEach(input => {
+        setupProductoInputListeners(input);
+        input.dataset.autocompleteSetup = 'true';
     });
 }
 
-
-function setupSkuInput(input) {
+function setupSkuInputListeners(input) {
     const suggestionsContainer = input.parentElement.querySelector('.producto-suggestions');
     if (!suggestionsContainer) return;
 
@@ -446,23 +310,24 @@ function setupSkuInput(input) {
         const term = this.value.trim().toLowerCase();
         if (!term) { suggestionsContainer.classList.remove('show'); return; }
         let sugerencias = [];
-        if (window.repuestosModule && typeof window.repuestosModule.filtrarRepuestosPorSku === 'function') {
-            sugerencias = sugerencias.concat(window.repuestosModule.filtrarRepuestosPorSku(term));
+        if (window.repuestosModule && typeof window.repuestosModule.filtrarRepuestosPorTermino === 'function') {
+            sugerencias = sugerencias.concat(window.repuestosModule.filtrarRepuestosPorTermino(term, 'sku'));
         }
-        if (window.productosModule && typeof window.productosModule.filtrarProductosPorSku === 'function') { // Asumiendo filtrarProductosPorSku
-             const prodSugs = window.productosModule.filtrarProductosPorSku(term);
-             prodSugs.forEach(p => { if(!sugerencias.some(s => s.sku === p.sku)) sugerencias.push(p);});
+        if (window.productosModule && typeof window.productosModule.filtrarProductosPorTermino === 'function') {
+            const prodSugs = window.productosModule.filtrarProductosPorTermino(term, 'sku');
+            prodSugs.forEach(p => { if(!sugerencias.some(s => s.sku === p.sku)) sugerencias.push(p);});
         }
-        if (typeof mostrarSugerencias === 'function') mostrarSugerencias(suggestionsContainer, sugerencias.slice(0, 7), this); // Limitar a 7 sugerencias
+        mostrarSugerenciasUI(suggestionsContainer, sugerencias.slice(0, 7), this);
     });
-    input.addEventListener('blur', () => setTimeout(() => suggestionsContainer.classList.remove('show'), 200)); // Ocultar con retardo
-    input.addEventListener('focus', function() { // Mostrar al hacer focus si hay texto
-         if(this.value.trim()) this.dispatchEvent(new Event('input'));
-    });
-    input.addEventListener('keydown', (e) => {if (typeof manejarNavegacionTeclado === 'function') manejarNavegacionTeclado(e, suggestionsContainer, this)});
+    input.addEventListener('blur', () => setTimeout(() => {
+        if(suggestionsContainer) suggestionsContainer.classList.remove('show');
+        // Lógica opcional para autocompletar nombre si solo se llenó SKU y es único
+    }, 200));
+    input.addEventListener('focus', function() { if(this.value.trim() && suggestionsContainer.children.length > 0) suggestionsContainer.classList.add('show'); else this.dispatchEvent(new Event('input')); });
+    input.addEventListener('keydown', (e) => manejarNavegacionTecladoUI(e, suggestionsContainer, this));
 }
 
-function setupProductoInput(input) {
+function setupProductoInputListeners(input) {
     const suggestionsContainer = input.parentElement.querySelector('.producto-suggestions');
     if (!suggestionsContainer) return;
 
@@ -470,24 +335,24 @@ function setupProductoInput(input) {
         const term = this.value.trim().toLowerCase();
         if (!term) { suggestionsContainer.classList.remove('show'); return; }
         let sugerencias = [];
-        if (window.repuestosModule && typeof window.repuestosModule.filtrarRepuestosPorNombre === 'function') {
-            sugerencias = sugerencias.concat(window.repuestosModule.filtrarRepuestosPorNombre(term));
+        if (window.repuestosModule && typeof window.repuestosModule.filtrarRepuestosPorTermino === 'function') {
+            sugerencias = sugerencias.concat(window.repuestosModule.filtrarRepuestosPorTermino(term, 'nombre'));
         }
-        if (window.productosModule && typeof window.productosModule.filtrarProductosPorNombre === 'function') { // Asumiendo filtrarProductosPorNombre
-            const prodSugs = window.productosModule.filtrarProductosPorNombre(term);
+        if (window.productosModule && typeof window.productosModule.filtrarProductosPorTermino === 'function') {
+            const prodSugs = window.productosModule.filtrarProductosPorTermino(term, 'nombre');
             prodSugs.forEach(p => { if(!sugerencias.some(s => s.nombre.toLowerCase() === p.nombre.toLowerCase())) sugerencias.push(p);});
         }
-        if (typeof mostrarSugerencias === 'function') mostrarSugerencias(suggestionsContainer, sugerencias.slice(0, 7), this);
+        mostrarSugerenciasUI(suggestionsContainer, sugerencias.slice(0, 7), this);
     });
-    input.addEventListener('blur', () => setTimeout(() => suggestionsContainer.classList.remove('show'), 200));
-    input.addEventListener('focus', function() {
-         if(this.value.trim()) this.dispatchEvent(new Event('input'));
-    });
-    input.addEventListener('keydown', (e) => {if (typeof manejarNavegacionTeclado === 'function') manejarNavegacionTeclado(e, suggestionsContainer, this)});
+     input.addEventListener('blur', () => setTimeout(() => {
+        if(suggestionsContainer) suggestionsContainer.classList.remove('show');
+        // Lógica opcional para autocompletar SKU si solo se llenó nombre y es único
+    }, 200));
+    input.addEventListener('focus', function() { if(this.value.trim() && suggestionsContainer.children.length > 0) suggestionsContainer.classList.add('show'); else this.dispatchEvent(new Event('input')); });
+    input.addEventListener('keydown', (e) => manejarNavegacionTecladoUI(e, suggestionsContainer, this));
 }
 
-
-function mostrarSugerencias(container, sugerencias, inputOrigen) {
+function mostrarSugerenciasUI(container, sugerencias, inputOrigen) {
     if (!container) return;
     container.innerHTML = '';
     if (!sugerencias || sugerencias.length === 0) {
@@ -496,12 +361,12 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
     }
 
     sugerencias.forEach(producto => {
-        const item = document.createElement('a'); // Usar <a> para que sea clickeable y accesible
-        item.className = 'dropdown-item producto-suggestion-item'; // Clases de Bootstrap para dropdown
+        const item = document.createElement('a');
+        item.className = 'dropdown-item producto-suggestion-item';
         item.href = '#';
-        // Mostrar SKU y Nombre. Si hay categoría, también.
         let displayText = `<strong>${producto.sku || 'S/SKU'}</strong> - ${producto.nombre}`;
         if (producto.categoria) displayText += ` <small class="text-muted">(${producto.categoria})</small>`;
+        if (producto.stock !== undefined) displayText += ` <span class="badge bg-${producto.stock > 0 ? 'success' : 'danger'} float-end">${producto.stock}</span>`;
         item.innerHTML = displayText;
 
         item.addEventListener('click', (e) => {
@@ -513,7 +378,6 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
 
             if (skuInput) skuInput.value = producto.sku || '';
             if (productoInput) productoInput.value = producto.nombre || '';
-
             container.classList.remove('show');
             if (cantidadInput) cantidadInput.focus();
         });
@@ -522,57 +386,52 @@ function mostrarSugerencias(container, sugerencias, inputOrigen) {
     container.classList.add('show');
 }
 
-
-function manejarNavegacionTeclado(e, container, input) {
+function manejarNavegacionTecladoUI(e, container, input) {
     if (!container.classList.contains('show')) return;
     const items = Array.from(container.querySelectorAll('.producto-suggestion-item'));
     if (items.length === 0) return;
-
     let activeIndex = items.findIndex(item => item.classList.contains('active'));
 
     if (e.key === 'ArrowDown') {
         e.preventDefault();
-        if (activeIndex < items.length - 1) activeIndex++;
-        else activeIndex = 0; // Volver al inicio
+        activeIndex = (activeIndex + 1) % items.length;
     } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        if (activeIndex > 0) activeIndex--;
-        else activeIndex = items.length - 1; // Ir al final
-    } else if (e.key === 'Enter') {
-        e.preventDefault();
+        activeIndex = (activeIndex - 1 + items.length) % items.length;
+    } else if (e.key === 'Enter' || e.key === 'Tab') { // Tab también selecciona
         if (activeIndex !== -1) {
+            e.preventDefault();
             items[activeIndex].click();
-        } else { // Si no hay nada activo, pero hay texto, intenta buscarlo (o no hacer nada)
-           container.classList.remove('show');
+        } else if (items.length === 1 && e.key === 'Enter') { // Si solo hay una sugerencia y se presiona enter
+            e.preventDefault();
+            items[0].click();
+        } else {
+            container.classList.remove('show'); // Cierra si no hay nada activo
         }
         return;
     } else if (e.key === 'Escape') {
         container.classList.remove('show');
         return;
     } else {
-        return; // No manejar otras teclas
+        return;
     }
 
     items.forEach((item, index) => {
         if (index === activeIndex) {
-            item.classList.add('active');
+            item.classList.add('active', 'bg-primary', 'text-white'); // Bootstrap active class
             item.scrollIntoView({ block: 'nearest' });
         } else {
-            item.classList.remove('active');
+            item.classList.remove('active', 'bg-primary', 'text-white');
         }
     });
 }
+// --- FIN LÓGICA DE AUTOCOMPLETADO ---
 
-// Llamadas iniciales al cargar el DOM
 document.addEventListener('DOMContentLoaded', function() {
-    if (document.getElementById('bodega-panel')) { // Solo si estamos en un contexto donde existe el panel de bodega
-        setFechaActual(); // Asegura que la fecha se establece al cargar la página si el form es visible
-        setupBodegaButtonListeners(); // Configurar listeners para botones en la tabla de bodega
-        actualizarEncabezadoTablaBodega(); // Asegurar que el encabezado esté correcto
-
-        // El autocompletado se llama en setupBodegaListeners, que a su vez se llama desde app.js/setupEventListeners
-        // Si se necesita llamar explícitamente aquí, asegurarse que productosModule y repuestosModule ya estén cargados.
-        // if (window.productosModule) setupProductoAutocompletado();
-        // if (window.repuestosModule) setupRepuestosAutocompletado();
+    // Asegurarse que setupBodegaListeners (que llama a setupAutocompletadoEnItems)
+    // se llame DESPUÉS de que utils.js, repuestos.js y productos.js (si existe) se hayan cargado y definido sus módulos.
+    // Esto se maneja mejor desde app.js -> initApp -> setupBaseEventListeners -> setupBodegaListeners
+    if (document.getElementById('bodega-panel')) {
+        actualizarEncabezadoTablaBodega(); // Asegurar que el encabezado de la tabla es correcto al cargar
     }
 });
