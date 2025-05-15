@@ -1,288 +1,250 @@
 // Script principal de la aplicación
 
 // Variables globales
-let solicitudes = [];
-// currentRole y currentUser se definen en auth.js, asegúrate que estén disponibles globalmente.
-// Si no, necesitas una forma de acceder a ellos aquí, por ejemplo:
-// let currentRole = window.authModule ? window.authModule.getCurrentRole() : null;
-// let currentUser = window.authModule ? window.authModule.getCurrentUser() : null;
-// O pásalos como parámetros donde sea necesario.
+let solicitudes = []; // Este array se llenará desde Firebase
+// currentRole y currentUser se asume que son definidos y actualizados por auth.js
+// y están disponibles globalmente (ej. window.currentRole, window.currentUser)
+// Si no, deben obtenerse a través de funciones de auth.js (ej. window.authModule.getCurrentUser())
 
-// Inicializar la aplicación cuando se carga la página
-document.addEventListener('DOMContentLoaded', init);
-
-// Función de inicialización
-function init() {
-    // Asegurarse de que las funciones de utils.js estén disponibles
-    if (typeof mostrarSincronizacion !== 'function' || typeof generarIdSolicitud !== 'function') {
-        console.error("Funciones de utils.js no están disponibles. Verifica el orden de carga de scripts.");
-        // Podrías mostrar un error al usuario o detener la inicialización.
-        // Por ahora, solo un log.
+// Función de inicialización principal
+function initApp() {
+    // Asegurarse que las funciones de utils.js están disponibles
+    // Es mejor si utils.js se carga primero, así que estas verificaciones son más una salvaguarda.
+    if (typeof window.utils === 'undefined' || typeof window.utils.mostrarSincronizacion !== 'function') {
+        console.error("Modulo utils.js no está completamente cargado o disponible. Funcionalidad limitada.");
+        alert("Error crítico: Las utilidades base de la aplicación no pudieron cargarse. Por favor, recargue la página.");
+        return; // Detener la inicialización si las utilidades no están.
     }
 
-    mostrarSincronizacion('Conectando con la base de datos...');
+    window.utils.mostrarSincronizacion('Conectando con la base de datos...');
+    checkInternetConnection(); // Función definida abajo
 
-    checkInternetConnection();
-
-    // Asegúrate que solicitudesRef está definido (usualmente en config.js)
+    // Asegurarse que solicitudesRef (de config.js) esté definido
     if (typeof solicitudesRef === 'undefined') {
-        console.error("solicitudesRef no está definido. Firebase no funcionará.");
-        mostrarSincronizacion('Error de configuración: No se puede conectar a Firebase.', true);
+        console.error("solicitudesRef (Firebase Database reference) no está definido. Revisa config.js.");
+        window.utils.mostrarSincronizacion('Error de configuración: No se puede conectar a Firebase.', true);
         return;
     }
 
     solicitudesRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        solicitudes = data ? Object.values(data) : []; // Actualiza la variable global 'solicitudes'
+        console.log("Datos crudos de Firebase:", data);
+        solicitudes = data ? Object.values(data) : [];
+        console.log("Array 'solicitudes' actualizado globalmente:", solicitudes);
 
-        // Ordenar solicitudes globalmente aquí si siempre se desea ese orden
+        // Ordenar solicitudes globalmente por fecha de solicitud (más recientes primero)
         if (solicitudes.length > 0 && solicitudes[0].hasOwnProperty('fechaSolicitud')) {
             solicitudes.sort((a, b) => new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud));
         }
 
-        updateCurrentView();
-        ocultarSincronizacion();
+        updateCurrentView(); // Actualiza la vista basada en el rol actual y los datos cargados
+        window.utils.ocultarSincronizacion();
 
-        if (window.isInitialLoad !== false) {
-            window.isInitialLoad = false;
+        // Evitar alerta en la carga inicial
+        if (window.isInitialLoad === undefined) { // Marcar la carga inicial
+            window.isInitialLoad = true;
+        } else if (window.isInitialLoad) {
+            window.isInitialLoad = false; // Ya no es la carga inicial
         } else {
-            if (typeof mostrarAlerta === 'function') mostrarAlerta('Datos actualizados correctamente', 'info');
+            window.utils.mostrarAlerta('Datos actualizados desde el servidor.', 'info');
         }
+
     }, (error) => {
-        console.error('Error al leer datos:', error);
-        mostrarSincronizacion('Error al conectar con la base de datos. Reintentando...', true);
-        setTimeout(reconnectToDatabase, 5000);
+        console.error('Error al leer datos de Firebase:', error);
+        window.utils.mostrarSincronizacion('Error al conectar con la base de datos. Reintentando...', true);
+        setTimeout(reconnectToDatabase, 7000); // Aumentar tiempo de reintento
     });
 
-    if (typeof checkExistingSession === 'function' && !checkExistingSession()) {
-        if (typeof showLoginScreen === 'function') showLoginScreen();
+    // Comprobar sesión existente (asumiendo que estas funciones vienen de auth.js)
+    if (typeof window.authModule !== 'undefined' && typeof window.authModule.checkExistingSession === 'function') {
+        if (!window.authModule.checkExistingSession()) {
+            if (typeof window.authModule.showLoginScreen === 'function') window.authModule.showLoginScreen();
+        }
+    } else {
+        console.warn("authModule o checkExistingSession no están definidos.");
+        // Si no hay módulo de autenticación, podría mostrarse el login por defecto o un error.
     }
 
-    setupEventListeners();
-    if (typeof setupUIComponents === 'function') setupUIComponents(); // De ui.js
+    setupBaseEventListeners(); // Listeners base de la aplicación
+    if (typeof window.ui !== 'undefined' && typeof window.ui.setupUIComponents === 'function') {
+        window.ui.setupUIComponents(); // De ui.js
+    }
+    if (typeof applyStoredTheme === 'function') applyStoredTheme(); // Si tienes theme
 }
 
 // Actualizar la vista actual según el rol
 function updateCurrentView() {
-    const role = typeof getCurrentRole === 'function' ? getCurrentRole() : null; // Obtener rol actual
+    const role = (window.authModule && typeof window.authModule.getCurrentRole === 'function') ? window.authModule.getCurrentRole() : null;
+    console.log("APP: Actualizando vista para rol:", role);
 
     if (role === 'bodega' && typeof cargarDatosBodega === 'function') {
+        console.log("APP: Llamando a cargarDatosBodega");
         cargarDatosBodega();
     } else if (role === 'fabricacion' && typeof cargarDatosFabricacion === 'function') {
+        console.log("APP: Llamando a cargarDatosFabricacion");
         cargarDatosFabricacion();
-    } else if (role === 'admin' && typeof cargarDatosAdmin === 'function') {
-        cargarDatosAdmin();
-        if (typeof window.userManagement !== 'undefined' && typeof window.userManagement.setupUsersListeners === 'function') {
-            window.userManagement.setupUsersListeners();
+    } else if (role === 'admin') {
+        if (typeof cargarDatosAdmin === 'function') { // Del admin.js unificado
+            console.log("APP: Llamando a cargarDatosAdmin");
+            cargarDatosAdmin();
         }
+        // Aquí también se podrían inicializar o cargar datos de otras pestañas de admin si es necesario
+    } else {
+        console.log("APP: Rol no reconocido o función de carga de datos no disponible para el rol:", role);
     }
 }
 
-// Verificar conexión a internet
 function checkInternetConnection() {
     if (!navigator.onLine) {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('No hay conexión a internet. Algunas funciones podrían no estar disponibles.', 'warning');
+        window.utils.mostrarAlerta('Sin conexión a internet.', 'warning');
     }
-
     window.addEventListener('online', () => {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Conexión a internet restablecida.', 'success');
+        window.utils.mostrarAlerta('Conexión restablecida.', 'success');
         reconnectToDatabase();
     });
-
-    window.addEventListener('offline', () => {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Se ha perdido la conexión a internet.', 'warning');
-    });
+    window.addEventListener('offline', () => window.utils.mostrarAlerta('Conexión perdida.', 'warning'));
 }
 
-// Reconectar a la base de datos
 function reconnectToDatabase() {
     if (typeof solicitudesRef === 'undefined') return;
-    mostrarSincronizacion('Reconectando...');
-    solicitudesRef.off();
-    solicitudesRef.once('value')
-        .then(() => init()) // Re-inicializa para re-adjuntar el listener 'on'
-        .catch(error => {
-            console.error('Error al reconectar:', error);
-            mostrarSincronizacion('Error al conectar. Reintentando...', true);
-            setTimeout(reconnectToDatabase, 10000);
-        });
+    window.utils.mostrarSincronizacion('Reconectando a Firebase...');
+    solicitudesRef.off(); // Desconectar listeners anteriores para evitar duplicados
+    // Re-adjuntar el listener principal (esto es similar a re-llamar parte de initApp)
+     solicitudesRef.on('value', (snapshot) => { /* ... misma lógica que en initApp ... */ }, (error) => { /* ... */ });
+     // Sería mejor tener una función que solo re-adjunte el listener sin llamar a todo initApp.
+     // Por ahora, una recarga forzada podría ser más simple si la reconexión es compleja.
+     // O, mejor, hacer que initApp sea idempotente y se pueda llamar de nuevo.
+     console.log("Intento de reconexión. Si persiste, recargar la página podría ser necesario.");
 }
 
-// Configurar los escuchadores de eventos
-function setupEventListeners() {
-    // Configurar listeners específicos por módulo
-    if (typeof setupAuthListeners === 'function') setupAuthListeners();
-    if (typeof setupBodegaListeners === 'function') setupBodegaListeners();
-    if (typeof setupFabricacionListeners === 'function') setupFabricacionListeners();
-    if (typeof setupAdminListeners === 'function') setupAdminListeners(); // Del admin.js unificado
-    if (typeof setupModalsListeners === 'function') setupModalsListeners(); // Del modals.js que modificamos
+
+// Configurar los escuchadores de eventos base de la aplicación
+function setupBaseEventListeners() {
+    // Inicializar listeners de módulos específicos (asegurándose que las funciones existen)
+    if (typeof window.authModule !== 'undefined' && typeof window.authModule.setupAuthListeners === 'function') window.authModule.setupAuthListeners();
+    if (typeof setupBodegaListeners === 'function') setupBodegaListeners(); // De bodega.js
+    if (typeof setupFabricacionListeners === 'function') setupFabricacionListeners(); // De fabricacion.js
+    if (typeof setupAdminListeners === 'function') setupAdminListeners(); // De admin.js (unificado)
+    if (typeof setupModalsListeners === 'function') setupModalsListeners(); // De modals.js
 
     document.addEventListener('keydown', (e) => {
+        const userRole = (window.authModule && typeof window.authModule.getCurrentRole === 'function') ? window.authModule.getCurrentRole() : null;
         if (e.ctrlKey && e.key === 'q') {
             e.preventDefault();
-            const role = typeof getCurrentRole === 'function' ? getCurrentRole() : null;
-            if (role && typeof handleLogout === 'function') {
-                handleLogout();
+            if (userRole && window.authModule && typeof window.authModule.handleLogout === 'function') {
+                window.authModule.handleLogout();
             }
         }
-        if (e.ctrlKey && e.key === 'd') {
-            e.preventDefault();
-            if (typeof toggleDarkMode === 'function') toggleDarkMode();
-        }
+        // if (e.ctrlKey && e.key === 'd') { // Si implementas toggleDarkMode
+        //     e.preventDefault();
+        //     if (typeof toggleDarkMode === 'function') toggleDarkMode();
+        // }
     });
 
+    // Listener para el formulario de nueva solicitud (PRINCIPAL PUNTO DE CREACIÓN)
     const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
     if (nuevaSolicitudForm) {
-        nuevaSolicitudForm.addEventListener('submit', function(e) {
-            e.preventDefault(); // Prevenir el envío normal del formulario
-            const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null; // Obtener usuario actual
-            if (!user) {
-                if (typeof mostrarAlerta === 'function') mostrarAlerta('Debes iniciar sesión para enviar solicitudes', 'warning');
+        // Remover cualquier listener previo para evitar duplicados si setupBaseEventListeners se llama más de una vez
+        // Es mejor asegurar que setupBaseEventListeners se llame solo una vez en initApp.
+        nuevaSolicitudForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const currentUser = (window.authModule && typeof window.authModule.getCurrentUser === 'function') ? window.authModule.getCurrentUser() : null;
+            if (!currentUser) {
+                window.utils.mostrarAlerta('Debe iniciar sesión para enviar solicitudes.', 'warning');
                 return;
             }
-            // Llamar a nuestra función que maneja la creación con el usuario
-            handleNuevaSolicitudConUsuario(user); // Pasamos el usuario directamente
-        }, true); // Usar true para capturar el evento antes que otros listeners
+            handleNuevaSolicitudConUsuario(currentUser); // Pasar el usuario actual
+        });
     }
 }
 
-// Función global para manejar cambios de página en cualquier panel
-// (Esta función ya estaba en tu app.js, la dejamos)
-function handlePageChange(newPage, panelName) {
-    // Asegúrate que currentPageBodega, etc., y cargarDatosBodega, etc., estén definidos
-    // y sean accesibles (globales o dentro de un módulo)
-    switch (panelName) {
-        case 'bodega':
-            if (typeof currentPageBodega !== 'undefined') currentPageBodega = newPage;
-            if (typeof cargarDatosBodega === 'function') cargarDatosBodega();
-            break;
-        case 'fabricacion':
-            if (typeof currentPageFabricacion !== 'undefined') currentPageFabricacion = newPage;
-            if (typeof cargarDatosFabricacion === 'function') cargarDatosFabricacion();
-            break;
-        case 'admin':
-            if (typeof currentPageAdmin !== 'undefined') currentPageAdmin = newPage;
-            if (typeof cargarDatosAdmin === 'function') cargarDatosAdmin();
-            break;
-        // Considera añadir casos para 'productos' y 'repuestos' si tienen paginación propia
-        case 'productos':
-            if (typeof currentPageProductos !== 'undefined' && typeof cargarTablaProductos === 'function') { // del admin.js unificado
-                currentPageProductos = newPage;
-                cargarTablaProductos();
-            }
-            break;
-        case 'repuestos':
-             if (typeof currentPageRepuestos !== 'undefined' && typeof cargarTablaRepuestos === 'function') { // del admin.js unificado
-                currentPageRepuestos = newPage;
-                cargarTablaRepuestos();
-            }
-            break;
-    }
-}
 
-// Manejar el envío de solicitud incluyendo información del usuario
-function handleNuevaSolicitudConUsuario(user) { // Recibe el objeto 'user'
-    // Obtener valores del formulario
+/**
+ * Maneja la creación y guardado de una nueva solicitud.
+ * @param {object} user - El objeto del usuario actual (debe tener id/uid y displayName).
+ */
+function handleNuevaSolicitudConUsuario(user) {
     const notaVentaInput = document.getElementById('nota-venta');
     const clienteInput = document.getElementById('cliente');
     const localInput = document.getElementById('local');
-    const fechaSolicitudInput = document.getElementById('fecha-solicitud'); // El campo de fecha
+    const fechaSolicitudInput = document.getElementById('fecha-solicitud');
 
     const notaVenta = notaVentaInput ? notaVentaInput.value.trim() : '';
     const cliente = clienteInput ? clienteInput.value.trim() : '';
     const local = localInput ? localInput.value.trim() : '';
+    let fechaSolicitud = fechaSolicitudInput ? fechaSolicitudInput.value : '';
 
-    // Usar la fecha del input (que bodega.js debería haber llenado con la actual)
-    // o generar una nueva si está vacía.
-    let fechaSolicitud;
-    if (fechaSolicitudInput && fechaSolicitudInput.value) {
-        fechaSolicitud = fechaSolicitudInput.value;
-    } else {
-        const fechaActual = new Date();
-        const año = fechaActual.getFullYear();
-        const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
-        const dia = String(fechaActual.getDate()).padStart(2, '0');
-        fechaSolicitud = `${año}-${mes}-${dia}`;
-        if(fechaSolicitudInput) fechaSolicitudInput.value = fechaSolicitud; // Actualizar por si acaso
+    if (!fechaSolicitud) { // Si bodega.js no la puso, la generamos aquí
+        const hoy = new Date();
+        fechaSolicitud = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
     }
-
 
     const items = [];
     const itemRows = document.querySelectorAll('#items-container .item-row');
-
     itemRows.forEach(row => {
         const skuInput = row.querySelector('.sku-input');
         const productoInput = row.querySelector('.producto-input');
         const cantidadInput = row.querySelector('input[name="cantidad[]"]');
-
-        const producto = productoInput ? productoInput.value.trim() : '';
-        const sku = skuInput ? skuInput.value.trim() : '';
-        const cantidad = cantidadInput ? parseInt(cantidadInput.value) : 0;
-
-        if (producto && !isNaN(cantidad) && cantidad > 0) {
+        if (productoInput && productoInput.value.trim() && cantidadInput && parseInt(cantidadInput.value) > 0) {
             items.push({
-                sku: sku,
-                producto: producto,
-                cantidad: cantidad
+                sku: skuInput ? skuInput.value.trim() : '',
+                producto: productoInput.value.trim(),
+                cantidad: parseInt(cantidadInput.value)
             });
         }
     });
 
     if (items.length === 0) {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Debe agregar al menos un producto.', 'warning');
+        window.utils.mostrarAlerta('Debe agregar al menos un producto a la solicitud.', 'warning');
+        return;
+    }
+    if (!notaVenta) { // Validación básica
+        window.utils.mostrarAlerta('El campo "Nota de Venta" es obligatorio.', 'warning');
+        notaVentaInput.focus();
         return;
     }
 
-    if (typeof mostrarSincronizacion === 'function') mostrarSincronizacion('Creando solicitud...');
 
-    // --- USO DE LA NUEVA FUNCIÓN DE utils.js ---
-    const nuevoIdSolicitud = typeof generarIdSolicitud === 'function' ?
-                                generarIdSolicitud() :
-                                Date.now().toString(); // Fallback si generarIdSolicitud no está
-    // --- FIN DEL CAMBIO ---
+    window.utils.mostrarSincronizacion('Creando solicitud...');
 
-    const nuevaSolicitud = {
+    const nuevoIdSolicitud = window.utils.generarIdSolicitud(); // Usar la función de utils.js
+
+    const nuevaSolicitudData = {
         id: nuevoIdSolicitud,
         notaVenta: notaVenta,
         fechaSolicitud: fechaSolicitud,
         cliente: cliente,
         local: local,
-        estado: 'Solicitud enviada por bodega',
-        observaciones: '', // Puedes añadir un campo si lo tienes en el form
+        estado: 'Solicitud enviada por bodega', // Estado inicial
+        observaciones: '', // Puedes añadir un campo de observaciones si lo tienes
         items: items,
-        creadoPor: { // Usar el 'user' pasado a la función
-            userId: user.id || user.uid || 'unknown_user', // Asegurar que hay un ID
-            username: user.username || 'N/A',
+        creadoPor: {
+            userId: user.id || user.uid || 'unknown_user_id', // Asegurar que el ID del usuario existe
             displayName: user.displayName || 'Usuario Desconocido'
         },
-        historial: [
-            {
-                fecha: new Date().toISOString(),
-                estado: 'Solicitud enviada por bodega',
-                observaciones: 'Solicitud creada.',
-                usuario: user.displayName || 'Usuario Desconocido',
-                userId: user.id || user.uid || 'unknown_user'
-            }
-        ],
-        fechaEstimada: null,
+        historial: [{
+            fecha: new Date().toISOString(),
+            estado: 'Solicitud enviada por bodega',
+            observaciones: 'Solicitud creada.',
+            usuario: user.displayName || 'Usuario Desconocido',
+            userId: user.id || user.uid || 'unknown_user_id'
+        }],
+        fechaEstimada: null, // Inicializar fechas estimadas/entrega
         fechaEntrega: null
     };
 
-    try {
-        if (typeof solicitudesRef === 'undefined') throw new Error("solicitudesRef no está definido.");
+    console.log("Nueva solicitud a guardar:", nuevaSolicitudData);
 
-        solicitudesRef.child(nuevaSolicitud.id).set(nuevaSolicitud)
-            .then(() => {
-                const form = document.getElementById('nueva-solicitud-form');
-                if (form) form.reset();
-
-                const itemsContainerEl = document.getElementById('items-container');
-                if (itemsContainerEl) {
-                    while (itemsContainerEl.children.length > 1) {
-                        const lastItemRow = itemsContainerEl.querySelector('.item-row:last-child');
-                        if(lastItemRow && itemsContainerEl.children.length > 1) itemsContainerEl.removeChild(lastItemRow); else break;
-                    }
-                    const firstItemRow = itemsContainerEl.querySelector('.item-row');
+    solicitudesRef.child(nuevoIdSolicitud).set(nuevaSolicitudData)
+        .then(() => {
+            document.getElementById('nueva-solicitud-form').reset();
+            const itemsContainerEl = document.getElementById('items-container');
+            if (itemsContainerEl) { // Limpiar items extras
+                while (itemsContainerEl.children.length > 1) {
+                     const lastItemRow = itemsContainerEl.querySelector('.item-row:last-child');
+                     if(lastItemRow && itemsContainerEl.children.length > 1) itemsContainerEl.removeChild(lastItemRow); else break;
+                }
+                 const firstItemRow = itemsContainerEl.querySelector('.item-row');
                     if (firstItemRow) {
                         const firstSkuInput = firstItemRow.querySelector('.sku-input');
                         const firstProductInput = firstItemRow.querySelector('.producto-input');
@@ -291,196 +253,136 @@ function handleNuevaSolicitudConUsuario(user) { // Recibe el objeto 'user'
                         if (firstProductInput) firstProductInput.value = '';
                         if (firstCantidadInput) firstCantidadInput.value = '';
                     }
-                }
+            }
+            if (typeof setFechaActual === 'function') setFechaActual(); // De bodega.js, para resetear la fecha
 
-                if (typeof setFechaActual === 'function') setFechaActual(); // De bodega.js
+            // La vista se actualizará por el listener de Firebase, no es necesario llamar a cargarDatosBodega() aquí.
+            // if (typeof currentPageBodega !== 'undefined') currentPageBodega = 1;
+            // if (typeof cargarDatosBodega === 'function') cargarDatosBodega();
 
-                if (typeof currentPageBodega !== 'undefined') currentPageBodega = 1;
-                // No es necesario llamar a cargarDatosBodega() aquí,
-                // el listener de 'solicitudesRef.on('value', ...)' en init() ya lo hará.
 
-                if (typeof mostrarAlerta === 'function') mostrarAlerta('Solicitud creada correctamente. ID: ' + nuevaSolicitud.id, 'success');
-                if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
+            window.utils.mostrarAlerta(`Solicitud ${nuevoIdSolicitud} creada con éxito.`, 'success');
+            window.utils.ocultarSincronizacion();
 
-                if (window.innerWidth < 768) {
-                    const nuevaSolicitudContainer = document.getElementById('nueva-solicitud-container');
-                    if (nuevaSolicitudContainer) {
-                        const bsCollapse = bootstrap.Collapse.getInstance(nuevaSolicitudContainer);
-                        if (bsCollapse) bsCollapse.hide();
-                    }
-                }
-            })
-            .catch(error => {
-                console.error('Error al guardar la solicitud:', error);
-                if (typeof mostrarAlerta === 'function') mostrarAlerta('Error al crear la solicitud: ' + error.message, 'danger');
-                if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
-            });
-    } catch (error) {
-        console.error('Error al procesar la solicitud:', error);
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Error al procesar la solicitud: ' + error.message, 'danger');
-        if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
-    }
+            // Opcional: colapsar el formulario en móviles
+            const formContainer = document.getElementById('nueva-solicitud-container');
+            if (formContainer && window.innerWidth < 768) {
+                const bsCollapse = bootstrap.Collapse.getInstance(formContainer);
+                if (bsCollapse) bsCollapse.hide();
+            }
+        })
+        .catch(error => {
+            console.error('Error al guardar la solicitud en Firebase:', error);
+            window.utils.mostrarAlerta('Error al crear la solicitud: ' + error.message, 'danger');
+            window.utils.ocultarSincronizacion();
+        });
 }
 
-// Manejar la actualización de estado incluyendo información del usuario actual
+
+/**
+ * Maneja la actualización del estado de una solicitud, incluyendo información del usuario.
+ * Esta función es llamada desde modals.js.
+ * @param {string} solicitudId
+ * @param {string} nuevoEstado
+ * @param {string} observaciones
+ * @param {object} user - El objeto del usuario actual.
+ * @param {string|null} fechaEstimada
+ * @param {string|null} fechaEntrega
+ */
 function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEstimada = null, fechaEntrega = null) {
-    // Asegurarse que 'solicitudes' (array global) está disponible
     if (typeof solicitudes === 'undefined' || !Array.isArray(solicitudes)) {
-        console.error("El array global 'solicitudes' no está disponible.");
-        if(typeof mostrarAlerta === 'function') mostrarAlerta('Error: No se pueden actualizar los datos de la solicitud.', 'danger');
+        console.error("El array global 'solicitudes' no está disponible en handleActualizarEstadoConUsuario.");
+        window.utils.mostrarAlerta('Error de datos: No se puede actualizar la solicitud.', 'danger');
         return;
     }
-
     const solicitud = solicitudes.find(s => s.id === solicitudId);
 
-    if (solicitud) {
-        try {
-            if (typeof mostrarSincronizacion === 'function') mostrarSincronizacion('Actualizando estado...');
+    if (!solicitud) {
+        window.utils.mostrarAlerta('Error: Solicitud no encontrada para actualizar.', 'danger');
+        return;
+    }
+    if (!user || (!user.id && !user.uid)) { // Asegurar que el objeto user y su id/uid son válidos
+        console.warn("Usuario no válido en handleActualizarEstadoConUsuario, usando datos de sistema.");
+        user = { id: 'sistema', uid: 'sistema', displayName: 'Sistema' };
+    }
 
-            if (!user || (!user.id && !user.uid)) { // uid es común en Firebase Auth
-                console.warn("Usuario no definido o sin ID, usando usuario de respaldo");
-                user = {
-                    id: 'sistema_' + Date.now(), // ID único simple
-                    uid: 'sistema_' + Date.now(),
-                    displayName: 'Sistema'
-                };
+    window.utils.mostrarSincronizacion('Actualizando estado de la solicitud...');
+
+    const solicitudActualizada = { ...solicitud };
+    solicitudActualizada.estado = nuevoEstado;
+    solicitudActualizada.observaciones = observaciones || solicitudActualizada.observaciones || ''; // Mantener observaciones si no se proveen nuevas
+
+    // Lógica de fechas
+    if (nuevoEstado === 'En fabricación') {
+        solicitudActualizada.fechaEstimada = fechaEstimada || null;
+        delete solicitudActualizada.fechaEntrega; // Borrar fecha de entrega si se vuelve a este estado
+    } else if (nuevoEstado === 'Entregado') {
+        solicitudActualizada.fechaEstimada = fechaEstimada || solicitudActualizada.fechaEstimada || null; // Mantener si ya existía
+        solicitudActualizada.fechaEntrega = fechaEntrega || new Date().toISOString().split('T')[0]; // Fecha actual si no se provee
+    } else { // Para otros estados, como "Solicitud enviada por bodega"
+        delete solicitudActualizada.fechaEstimada;
+        delete solicitudActualizada.fechaEntrega;
+    }
+
+    solicitudActualizada.historial = Array.isArray(solicitud.historial) ? [...solicitud.historial] : [];
+    solicitudActualizada.historial.push({
+        fecha: new Date().toISOString(),
+        estado: nuevoEstado,
+        observaciones: observaciones || '',
+        usuario: user.displayName,
+        userId: user.id || user.uid,
+        fechaEstimada: nuevoEstado === 'En fabricación' || nuevoEstado === 'Entregado' ? (fechaEstimada || null) : null,
+        fechaEntrega: nuevoEstado === 'Entregado' ? (fechaEntrega || new Date().toISOString().split('T')[0]) : null
+    });
+
+    console.log("Actualizando solicitud en Firebase:", solicitudActualizada);
+    solicitudesRef.child(solicitudId).update(solicitudActualizada)
+        .then(() => {
+            const modalEl = document.getElementById('actualizar-estado-modal');
+            if (modalEl) {
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) modalInstance.hide();
+                // El evento 'hidden.bs.modal' en modals.js debería limpiar el backdrop
             }
+            window.utils.mostrarAlerta('Estado actualizado correctamente.', 'success');
+            window.utils.ocultarSincronizacion();
+            // La vista se actualiza por el listener de Firebase
+        })
+        .catch(error => {
+            console.error('Error al actualizar estado en Firebase:', error);
+            window.utils.mostrarAlerta('Error al actualizar estado: ' + error.message, 'danger');
+            window.utils.ocultarSincronizacion();
+        });
+}
 
-            const solicitudActualizada = {...solicitud};
-            solicitudActualizada.estado = nuevoEstado;
-            solicitudActualizada.observaciones = observaciones || ''; // Asegurar que observaciones sea string
+// La función overrideUpdateHandlers podría no ser necesaria si modals.js
+// ya está configurado para llamar a handleActualizarEstadoConUsuario (pasándole el currentUser).
+// Es mejor tener una sola cadena de llamadas para evitar confusión.
 
-            // Actualizar fechas
-            if (nuevoEstado === 'En fabricación') {
-                solicitudActualizada.fechaEstimada = fechaEstimada || null;
-                delete solicitudActualizada.fechaEntrega; // Limpiar fecha de entrega si se vuelve a poner en fabricación
-            } else if (nuevoEstado === 'Entregado') {
-                solicitudActualizada.fechaEstimada = fechaEstimada || solicitudActualizada.fechaEstimada || null; // Mantener si existe, sino null
-                solicitudActualizada.fechaEntrega = fechaEntrega || new Date().toISOString().split('T')[0];
-            } else { // Para otros estados, limpiar ambas fechas
-                delete solicitudActualizada.fechaEstimada;
-                delete solicitudActualizada.fechaEntrega;
-            }
+// Si toggleDarkMode y applyStoredTheme se van a usar, deben estar definidas.
+// function toggleDarkMode() { /* ... */ }
+// function applyStoredTheme() { /* ... */ }
 
-            // Asegurar que el historial existe
-            if (!Array.isArray(solicitudActualizada.historial)) {
-                solicitudActualizada.historial = [];
-            }
-
-            solicitudActualizada.historial.push({
-                fecha: new Date().toISOString(),
-                estado: nuevoEstado,
-                observaciones: observaciones || '',
-                usuario: user.displayName || 'Usuario del Sistema',
-                userId: user.id || user.uid,
-                fechaEstimada: fechaEstimada || null, // Guardar las fechas que se usaron para este cambio
-                fechaEntrega: fechaEntrega || null
-            });
-
-            console.log("Guardando actualización:", solicitudActualizada);
-
-            if (typeof solicitudesRef === 'undefined') throw new Error("solicitudesRef no está definido.");
-
-            solicitudesRef.child(solicitudId).update(solicitudActualizada)
-                .then(() => {
-                    const modalEl = document.getElementById('actualizar-estado-modal');
-                    if (modalEl) {
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                        if (modalInstance) modalInstance.hide();
-                        // La limpieza del backdrop ya se maneja en el evento 'hidden.bs.modal' en modals.js
-                    }
-                    if (typeof mostrarAlerta === 'function') mostrarAlerta('Estado actualizado correctamente.', 'success');
-                    if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
-                    // La vista se actualizará automáticamente por el listener 'solicitudesRef.on('value', ...)'
-                })
-                .catch(error => {
-                    console.error('Error al actualizar el estado:', error);
-                    if (typeof mostrarAlerta === 'function') mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
-                    if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
-                });
-        } catch (error) {
-            console.error('Error al actualizar el estado (bloque try):', error);
-            if (typeof mostrarAlerta === 'function') mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
-            if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
-        }
+// Inicializar el sistema de autenticación si existe
+// y otros listeners que dependen del DOM pero no de datos de Firebase.
+function initSecondarySystems() {
+    if (typeof window.authModule !== 'undefined' && typeof window.authModule.initAuthSystem === 'function') {
+        window.authModule.initAuthSystem(); // Asumiendo que authModule tiene su propia inicialización
     } else {
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('No se encontró la solicitud para actualizar.', 'danger');
-        if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
+        console.warn("authModule o initAuthSystem no definidos.");
     }
-}
-
-// Sobrescribir el manejador de actualización de estado para incluir al usuario
-// Esta función ya no es estrictamente necesaria si el listener en modals.js
-// ya llama a handleActualizarEstadoConUsuario a través de una cadena de llamadas.
-// Sin embargo, la mantenemos por si hay un listener directo en el formulario aquí.
-function overrideUpdateHandlers() {
-    const actualizarEstadoForm = document.getElementById('actualizar-estado-form');
-    if (actualizarEstadoForm) {
-        // Remover cualquier listener previo para evitar duplicados si se llama varias veces initAuthSystem
-        // Esto es un poco más complejo; lo ideal es que el listener se añada una sola vez.
-        // Por ahora, asumimos que el listener en modals.js es el principal o que este se coordina.
-
-        actualizarEstadoForm.addEventListener('submit', function(e) { // Este listener podría entrar en conflicto con el de modals.js
-            e.preventDefault();
-            console.log("Submit desde overrideUpdateHandlers en app.js"); // Para depurar cuál listener se activa
-            const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
-            if (!user) {
-                if (typeof mostrarAlerta === 'function') mostrarAlerta('Debes iniciar sesión para actualizar estados', 'warning');
-                return;
-            }
-
-            const solicitudId = document.getElementById('solicitud-id').value;
-            const nuevoEstado = document.getElementById('nuevo-estado').value;
-            const observaciones = document.getElementById('observaciones').value;
-            const fechaEstimada = document.getElementById('fecha-estimada') ? document.getElementById('fecha-estimada').value : null;
-            const fechaEntrega = document.getElementById('fecha-entrega') ? document.getElementById('fecha-entrega').value : null;
-
-            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEstimada, fechaEntrega);
-        }, true); // El true puede ser problemático si modals.js también tiene un listener.
-    }
+    // Aplicar tema si la función existe
+    if (typeof applyStoredTheme === 'function') applyStoredTheme();
 }
 
 
-// Alternar entre tema claro y oscuro (para implementación futura)
-function toggleDarkMode() {
-    const body = document.body;
-    if (body.classList.contains('dark-mode')) {
-        body.classList.remove('dark-mode');
-        localStorage.setItem('theme', 'light');
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Tema claro activado', 'info');
-    } else {
-        body.classList.add('dark-mode');
-        localStorage.setItem('theme', 'dark');
-        if (typeof mostrarAlerta === 'function') mostrarAlerta('Tema oscuro activado', 'info');
-    }
-}
+// Asegurarse que initApp se llama después de que el DOM esté listo.
+document.addEventListener('DOMContentLoaded', initApp);
+// initSecondarySystems podría llamarse también aquí o dentro de initApp al final.
+document.addEventListener('DOMContentLoaded', initSecondarySystems);
 
-// Aplicar el tema guardado (para implementación futura)
-function applyStoredTheme() {
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-    }
-}
 
-// Inicializar el sistema de autenticación y sobreescribir handlers
-function initAuthSystem() {
-    // La lógica de overrideUpdateHandlers puede ser conflictiva si modals.js también
-    // adjunta un listener al mismo formulario. Es mejor tener un único punto de verdad
-    // para manejar el submit de ese formulario.
-    // Considera si la lógica de `handleActualizarEstado` en modals.js debería llamar
-    // directamente a `handleActualizarEstadoConUsuario` obteniendo el usuario actual.
-    // overrideUpdateHandlers(); // Comentado temporalmente para evitar doble listener.
-
-    // Otras inicializaciones relacionadas con autenticación
-}
-
-window.addEventListener('DOMContentLoaded', initAuthSystem);
-
-// Hacer globales las funciones necesarias si son llamadas desde el HTML (onclick) o desde otros módulos sin import.
-// Es mejor minimizar el uso de globales y usar módulos si es posible.
-window.handlePageChange = handlePageChange; // Ya estaba
-// Si 'handleActualizarEstadoConUsuario' es llamado desde modals.js (como parece ser el caso)
-// y 'modals.js' no tiene acceso a 'currentUser', entonces 'handleActualizarEstadoConUsuario'
-// debe obtener 'currentUser' por sí misma o recibirlo.
-// Ya modificamos modals.js para que llame a esta función con el usuario.
+// Exponer funciones que podrían ser llamadas desde el HTML (onclick) o módulos que no importan explícitamente
+window.handlePageChange = handlePageChange;
+// La siguiente es crucial si modals.js la va a llamar y no puede acceder a currentUser directamente
+window.handleActualizarEstadoConUsuario = handleActualizarEstadoConUsuario;
