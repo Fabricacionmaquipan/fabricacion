@@ -1136,30 +1136,95 @@
             });
             
             // Función para cargar más registros de auditoría
-            window.cargarMasRegistros = function() {
-                const infoEl = document.getElementById('auditoria-info');
-                const currentCount = infoEl ? parseInt(infoEl.textContent.match(/\d+/)[0]) : 100;
-                const newCount = currentCount + 100;
+window.cargarMasRegistros = function() {
+    console.log('Iniciando carga de más registros de auditoría...');
+    
+    // Obtener el elemento que muestra la información actual
+    const infoEl = document.getElementById('auditoria-info');
+    
+    // Obtener la cantidad actual de registros mostrados y calcular la nueva cantidad
+    const currentCount = infoEl ? parseInt(infoEl.textContent.match(/\d+/)[0]) : 100;
+    const newCount = currentCount + 100;
+    
+    console.log(`Intentando cargar ${newCount} registros (actualmente mostrando ${currentCount})...`);
+    
+    // Verificar que el módulo de auditoría esté disponible
+    if (typeof window.auditoria === 'undefined' || typeof window.auditoria.cargarRegistrosAuditoria !== 'function') {
+        console.error('Error: El módulo de auditoría no está disponible o no tiene la función cargarRegistrosAuditoria');
+        
+        // Mostrar alerta si el módulo de componentes está disponible
+        if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+            window.componentesModule.mostrarAlerta(
+                'No se pueden cargar más registros. El módulo de auditoría no está disponible.', 
+                'danger'
+            );
+        } else {
+            // Fallback si el módulo de componentes no está disponible
+            alert('No se pueden cargar más registros. El módulo de auditoría no está disponible.');
+        }
+        return;
+    }
+    
+    // Mostrar indicador de sincronización si el módulo de componentes está disponible
+    if (window.componentesModule && typeof window.componentesModule.mostrarSincronizacion === 'function') {
+        window.componentesModule.mostrarSincronizacion('Cargando más registros de auditoría...');
+    } else {
+        console.log('El indicador de sincronización no está disponible');
+    }
+    
+    // Cargar los registros
+    window.auditoria.cargarRegistrosAuditoria(newCount)
+        .then(logs => {
+            console.log(`Se cargaron ${logs.length} registros correctamente`);
+            
+            // Obtener el contenedor para mostrar los logs
+            const container = document.getElementById('tabla-auditoria-container');
+            
+            if (container && typeof window.auditoria.mostrarTablaLogs === 'function') {
+                // Mostrar los logs en la tabla
+                window.auditoria.mostrarTablaLogs(logs, container);
                 
-                if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                    mostrarSincronizacion('Cargando más registros...');
-                    
-                    window.auditoria.cargarRegistrosAuditoria(newCount).then(logs => {
-                        const container = document.getElementById('tabla-auditoria-container');
-                        if (container && typeof window.auditoria.mostrarTablaLogs === 'function') {
-                            window.auditoria.mostrarTablaLogs(logs, container);
-                            
-                            // Actualizar información
-                            if (infoEl) infoEl.textContent = `Mostrando ${logs.length} registros`;
-                        }
-                        ocultarSincronizacion();
-                    }).catch(error => {
-                        mostrarAlerta(`Error al cargar más registros: ${error.message}`, 'danger');
-                        ocultarSincronizacion();
-                    });
+                // Actualizar información
+                if (infoEl) {
+                    infoEl.textContent = `Mostrando ${logs.length} registros`;
                 }
-            };
+                
+                console.log('Tabla de logs actualizada correctamente');
+            } else {
+                console.error('Error: No se pudo actualizar la tabla de logs');
+                
+                // Mostrar mensaje si el contenedor no está disponible
+                if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+                    window.componentesModule.mostrarAlerta(
+                        'No se pudo actualizar la tabla de registros. Por favor, refresque la página.', 
+                        'warning'
+                    );
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error al cargar más registros:', error);
+            
+            // Mostrar error al usuario
+            if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+                window.componentesModule.mostrarAlerta(
+                    `Error al cargar más registros: ${error.message}`, 
+                    'danger'
+                );
+            } else {
+                // Fallback si el módulo de componentes no está disponible
+                alert(`Error al cargar más registros: ${error.message}`);
+            }
+        })
+        .finally(() => {
+            // Ocultar indicador de sincronización al finalizar
+            if (window.componentesModule && typeof window.componentesModule.ocultarSincronizacion === 'function') {
+                window.componentesModule.ocultarSincronizacion();
+            }
+            
+            console.log('Proceso de carga de registros finalizado');
         });
+};
     </script>
 </body>
 </html>
