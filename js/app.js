@@ -1,359 +1,462 @@
 // Script principal de la aplicación
 
 // Variables globales
-let solicitudes = []; // Este array se llenará desde Firebase
-// Se asume que window.authModule (de auth.js) expondrá:
-// window.authModule.getCurrentUser()
-// window.authModule.getCurrentRole()
-// window.authModule.checkExistingSession()
-// window.authModule.showLoginScreen()
-// window.authModule.setupAuthListeners()
-// window.authModule.handleLogout()
+let solicitudes = [];
 
-// Función de inicialización principal
-function initApp() {
-    // Es crucial que utils.js se cargue ANTES que app.js
-    if (typeof mostrarSincronizacion !== 'function' || typeof generarIdSolicitud !== 'function') {
-        console.error("Funciones de utils.js no están disponibles. Verifica el orden de carga de scripts en index.html.");
-        alert("Error crítico: La aplicación no puede iniciarse correctamente. Faltan utilidades base. Por favor, recargue la página o contacte al administrador.");
-        return;
-    }
+// Inicializar la aplicación cuando se carga la página
+document.addEventListener('DOMContentLoaded', init);
 
+// Función de inicialización
+function init() {
+    // Mostrar estado de sincronización
     mostrarSincronizacion('Conectando con la base de datos...');
+    
+    // Verificar conexión a internet
     checkInternetConnection();
-
-    if (typeof solicitudesRef === 'undefined') { // solicitudesRef debe venir de config.js
-        console.error("Referencia a Firebase (solicitudesRef) no definida. Revisa config.js.");
-        mostrarSincronizacion('Error de configuración: No se puede conectar a Firebase.', true);
-        return;
-    }
-
+    
+    // Escuchar cambios en la base de datos
     solicitudesRef.on('value', (snapshot) => {
         const data = snapshot.val();
-        console.log("APP.JS: Datos crudos de Firebase:", data);
-        solicitudes = data ? Object.values(data) : [];
-        console.log("APP.JS: Array 'solicitudes' actualizado globalmente:", solicitudes);
-
-        if (solicitudes.length > 0 && solicitudes[0] && solicitudes[0].hasOwnProperty('fechaSolicitud')) {
-            solicitudes.sort((a, b) => new Date(b.fechaSolicitud) - new Date(a.fechaSolicitud));
-        }
-
-        updateCurrentView();
-        ocultarSincronizacion();
-
-        if (window.isAppInitialLoad === undefined) {
-            window.isAppInitialLoad = true;
-        } else if (window.isAppInitialLoad) {
-            window.isAppInitialLoad = false;
+        if (data) {
+            solicitudes = Object.values(data);
+            
+            // Actualizar la vista según el rol actual
+            updateCurrentView();
+            
+            ocultarSincronizacion();
+            
+            // Mostrar notificación solo si no es la carga inicial
+            if (window.isInitialLoad !== false) {
+                window.isInitialLoad = false;
+            } else {
+                mostrarAlerta('Datos actualizados correctamente', 'info');
+            }
         } else {
-            mostrarAlerta('Datos actualizados desde el servidor.', 'info');
+            solicitudes = [];
+            updateCurrentView();
+            ocultarSincronizacion();
         }
     }, (error) => {
-        console.error('APP.JS: Error al leer datos de Firebase:', error);
-        mostrarSincronizacion('Error al conectar. Reintentando...', true);
-        setTimeout(reconnectToDatabase, 7000);
+        console.error('Error al leer datos:', error);
+        mostrarSincronizacion('Error al conectar con la base de datos. Reintentando...', true);
+        
+        // Reintentar la conexión después de un tiempo
+        setTimeout(() => {
+            reconnectToDatabase();
+        }, 5000);
     });
-
-    if (window.authModule && typeof window.authModule.checkExistingSession === 'function') {
-        if (!window.authModule.checkExistingSession()) {
-            if (typeof window.authModule.showLoginScreen === 'function') window.authModule.showLoginScreen();
-        }
-    } else {
-        console.warn("authModule o sus funciones de sesión no están disponibles. Mostrando login por defecto.");
-        const loginScreenEl = document.getElementById('login-screen');
-        if (loginScreenEl) loginScreenEl.style.display = 'block';
+    
+    // Comprobar si hay una sesión activa
+    if (!checkExistingSession()) {
+        showLoginScreen();
     }
-
-    setupBaseEventListeners();
-    if (window.ui && typeof window.ui.setupUIComponents === 'function') { // Asumiendo que ui.js define window.ui
-        window.ui.setupUIComponents();
-    }
-    if (typeof applyStoredTheme === 'function') applyStoredTheme(); // Si tienes theming
+    
+    // Configurar event listeners
+    setupEventListeners();
+    
+    // Inicializar componentes de UI
+    setupUIComponents();
 }
 
+// Actualizar la vista actual según el rol
 function updateCurrentView() {
-    const role = (window.authModule && typeof window.authModule.getCurrentRole === 'function')
-                    ? window.authModule.getCurrentRole()
-                    : null;
-    console.log("APP.JS: Actualizando vista para rol:", role);
-
-    if (role === 'bodega' && typeof cargarDatosBodega === 'function') cargarDatosBodega();
-    else if (role === 'fabricacion' && typeof cargarDatosFabricacion === 'function') cargarDatosFabricacion();
-    else if (role === 'admin') {
-        if (typeof cargarDatosAdmin === 'function') cargarDatosAdmin();
-        // Otras inicializaciones específicas de admin pueden ir aquí
-    } else if (role) { // Si hay rol pero no función de carga
-        console.warn(`APP.JS: No hay función de carga de datos para el rol '${role}'.`);
+    if (currentRole === 'bodega') {
+        cargarDatosBodega();
+    } else if (currentRole === 'fabricacion') {
+        cargarDatosFabricacion();
+    } else if (currentRole === 'admin') {
+        cargarDatosAdmin();
+        // También cargar usuarios si es admin
+        if (typeof window.userManagement !== 'undefined') {
+            window.userManagement.setupUsersListeners();
+        }
     }
-    // Si no hay rol (ej. pantalla de login), no se hace nada aquí.
 }
 
+// Verificar conexión a internet
 function checkInternetConnection() {
-    if (!navigator.onLine) mostrarAlerta('Sin conexión a internet.', 'warning');
-    window.addEventListener('online', () => { mostrarAlerta('Conexión restablecida.', 'success'); reconnectToDatabase(); });
-    window.addEventListener('offline', () => mostrarAlerta('Conexión perdida.', 'warning'));
+    if (!navigator.onLine) {
+        mostrarAlerta('No hay conexión a internet. Algunas funciones podrían no estar disponibles.', 'warning');
+    }
+    
+    // Escuchar cambios en la conexión
+    window.addEventListener('online', () => {
+        mostrarAlerta('Conexión a internet restablecida.', 'success');
+        reconnectToDatabase();
+    });
+    
+    window.addEventListener('offline', () => {
+        mostrarAlerta('Se ha perdido la conexión a internet.', 'warning');
+    });
 }
 
+// Reconectar a la base de datos
 function reconnectToDatabase() {
-    if (typeof solicitudesRef === 'undefined') return;
-    mostrarSincronizacion('Reconectando a Firebase...');
+    mostrarSincronizacion('Reconectando...');
+    
+    // Desconectar para limpiar escuchadores anteriores
     solicitudesRef.off();
-    // Re-ejecutar la parte de conexión de initApp o una función específica de reconexión
-    initApp(); // Simplificado, pero podría ser más granular
-    console.log("APP.JS: Intento de reconexión. Si persiste, recargar la página podría ser necesario.");
+    
+    // Reintentar la conexión
+    solicitudesRef.once('value')
+        .then(() => {
+            // Si tiene éxito, volver a añadir el escuchador permanente
+            init();
+        })
+        .catch(error => {
+            console.error('Error al reconectar:', error);
+            mostrarSincronizacion('Error al conectar con la base de datos. Reintentando...', true);
+            
+            // Reintentar después de un tiempo más largo
+            setTimeout(reconnectToDatabase, 10000);
+        });
 }
 
-function setupBaseEventListeners() {
-    if (window.authModule && typeof window.authModule.setupAuthListeners === 'function') window.authModule.setupAuthListeners();
-    if (typeof setupBodegaListeners === 'function') setupBodegaListeners();
-    if (typeof setupFabricacionListeners === 'function') setupFabricacionListeners();
-    if (typeof setupAdminListeners === 'function') setupAdminListeners();
-    if (typeof setupModalsListeners === 'function') setupModalsListeners();
-
+// Configurar los escuchadores de eventos
+function setupEventListeners() {
+    // Configurar listeners específicos por módulo
+    setupAuthListeners();
+    setupBodegaListeners();
+    setupFabricacionListeners();
+    setupAdminListeners();
+    setupModalsListeners();
+    
+    // Escuchar eventos globales
     document.addEventListener('keydown', (e) => {
-        const userIsLoggedIn = window.authModule && typeof window.authModule.getCurrentUser === 'function' && window.authModule.getCurrentUser();
+        // Atajo de teclado para cerrar sesión (Ctrl+Q)
         if (e.ctrlKey && e.key === 'q') {
             e.preventDefault();
-            if (userIsLoggedIn && window.authModule && typeof window.authModule.handleLogout === 'function') {
-                window.authModule.handleLogout();
+            if (currentRole) {
+                handleLogout();
             }
         }
+        
+        // Atajo para alternar el tema (para implementación futura) (Ctrl+D)
+        if (e.ctrlKey && e.key === 'd') {
+            e.preventDefault();
+            toggleDarkMode();
+        }
     });
-
+    
+    // Manejar envío de solicitudes con el usuario actual
     const nuevaSolicitudForm = document.getElementById('nueva-solicitud-form');
     if (nuevaSolicitudForm) {
-        nuevaSolicitudForm.addEventListener('submit', function(event) {
-            event.preventDefault();
-            const currentUser = (window.authModule && typeof window.authModule.getCurrentUser === 'function')
-                                ? window.authModule.getCurrentUser()
-                                : null;
+        // Sobrescribir el evento de envío de solicitud para incluir el usuario
+        nuevaSolicitudForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
             if (!currentUser) {
-                mostrarAlerta('Debe iniciar sesión para enviar solicitudes.', 'warning');
+                mostrarAlerta('Debes iniciar sesión para enviar solicitudes', 'warning');
                 return;
             }
-            handleNuevaSolicitudConUsuario(currentUser);
-        });
+            
+            // Llamar al manejador original pero incluir el usuario actual
+            handleNuevaSolicitudConUsuario(e, currentUser);
+        }, true); // Usar true para capturar el evento antes que otros listeners
     }
 }
 
+// Función global para manejar cambios de página en cualquier panel
 function handlePageChange(newPage, panelName) {
-    // Implementación centralizada del cambio de página
-    console.log(`APP.JS: Cambiando a página ${newPage} para panel ${panelName}`);
     switch (panelName) {
         case 'bodega':
-            if (typeof currentPageBodega !== 'undefined') currentPageBodega = newPage;
-            if (typeof cargarDatosBodega === 'function') cargarDatosBodega();
+            currentPageBodega = newPage;
+            cargarDatosBodega();
             break;
         case 'fabricacion':
-            if (typeof currentPageFabricacion !== 'undefined') currentPageFabricacion = newPage;
-            if (typeof cargarDatosFabricacion === 'function') cargarDatosFabricacion();
+            currentPageFabricacion = newPage;
+            cargarDatosFabricacion();
             break;
-        case 'admin': // Para la tabla principal de solicitudes en admin
-            if (typeof currentPageAdmin !== 'undefined') currentPageAdmin = newPage;
-            if (typeof cargarDatosAdmin === 'function') cargarDatosAdmin();
+        case 'admin':
+            currentPageAdmin = newPage;
+            cargarDatosAdmin();
             break;
-        case 'productos': // Para la tabla de productos en admin
-             if (typeof currentPageProductos !== 'undefined' && window.adminProductos && typeof window.adminProductos.cargarTablaProductos === 'function') {
-                currentPageProductos = newPage;
-                window.adminProductos.cargarTablaProductos();
-            } else if (typeof currentPageProductos !== 'undefined' && typeof cargarTablaProductos === 'function') { // Si está en admin.js global
-                 currentPageProductos = newPage;
-                 cargarTablaProductos();
-            }
-            break;
-        case 'repuestos': // Para la tabla de repuestos en admin
-             if (typeof currentPageRepuestos !== 'undefined' && window.adminRepuestos && typeof window.adminRepuestos.cargarTablaRepuestos === 'function') {
-                currentPageRepuestos = newPage;
-                window.adminRepuestos.cargarTablaRepuestos();
-            } else if (typeof currentPageRepuestos !== 'undefined' && typeof cargarTablaRepuestos === 'function') { // Si está en admin.js global
-                 currentPageRepuestos = newPage;
-                 cargarTablaRepuestos();
-            }
-            break;
-        default:
-            console.warn(`APP.JS: Panel desconocido para paginación: ${panelName}`);
     }
 }
-window.handlePageChange = handlePageChange; // Exponer globalmente
 
-function handleNuevaSolicitudConUsuario(user) {
-    const notaVentaInput = document.getElementById('nota-venta');
-    const clienteInput = document.getElementById('cliente');
-    const localInput = document.getElementById('local');
-    const fechaSolicitudInput = document.getElementById('fecha-solicitud');
-
-    const notaVenta = notaVentaInput ? notaVentaInput.value.trim() : '';
-    const cliente = clienteInput ? clienteInput.value.trim() : '';
-    const local = localInput ? localInput.value.trim() : '';
-    let fechaSolicitud = fechaSolicitudInput ? fechaSolicitudInput.value : '';
-
-    if (!fechaSolicitud) {
-        const hoy = new Date();
-        fechaSolicitud = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
+// Manejar el envío de solicitud incluyendo información del usuario
+function handleNuevaSolicitudConUsuario(e, user) {
+    // Obtener valores del formulario
+    const notaVenta = document.getElementById('nota-venta').value;
+    
+    // Usar siempre la fecha actual para las nuevas solicitudes
+    const fechaActual = new Date();
+    const año = fechaActual.getFullYear();
+    const mes = String(fechaActual.getMonth() + 1).padStart(2, '0');
+    const dia = String(fechaActual.getDate()).padStart(2, '0');
+    const fechaSolicitud = `${año}-${mes}-${dia}`;
+    
+    // Actualizar el campo de fecha en el formulario (por si acaso)
+    const fechaInput = document.getElementById('fecha-solicitud');
+    if (fechaInput) {
+        fechaInput.value = fechaSolicitud;
     }
-
-    const items = [];
-    document.querySelectorAll('#items-container .item-row').forEach(row => {
-        const skuInput = row.querySelector('.sku-input');
-        const productoInput = row.querySelector('.producto-input');
-        const cantidadInput = row.querySelector('input[name="cantidad[]"]');
-        if (productoInput && productoInput.value.trim() && cantidadInput && parseInt(cantidadInput.value) > 0) {
-            items.push({
-                sku: skuInput ? skuInput.value.trim() : '',
-                producto: productoInput.value.trim(),
-                cantidad: parseInt(cantidadInput.value)
-            });
+    
+    // Obtener productos y cantidades
+    const productos = [];
+    const cantidades = [];
+    
+    const productosInputs = document.querySelectorAll('input[name="producto[]"]');
+    const cantidadesInputs = document.querySelectorAll('input[name="cantidad[]"]');
+    
+    for (let i = 0; i < productosInputs.length; i++) {
+        const producto = productosInputs[i].value.trim();
+        const cantidad = parseInt(cantidadesInputs[i].value);
+        
+        if (producto && !isNaN(cantidad) && cantidad > 0) {
+            productos.push(producto);
+            cantidades.push(cantidad);
         }
-    });
-
-    if (items.length === 0) {
+    }
+    
+    if (productos.length === 0) {
         mostrarAlerta('Debe agregar al menos un producto.', 'warning');
         return;
     }
-    if (!notaVenta) {
-        mostrarAlerta('El campo "Nota de Venta" es obligatorio.', 'warning');
-        if(notaVentaInput) notaVentaInput.focus();
-        return;
-    }
-
+    
+    // Mostrar indicador de carga
     mostrarSincronizacion('Creando solicitud...');
-    const nuevoIdSolicitud = generarIdSolicitud(); // De utils.js
-
-    const nuevaSolicitudData = {
-        id: nuevoIdSolicitud,
+    
+    // Crear la nueva solicitud
+    const nuevaSolicitud = {
+        id: Date.now().toString(),
         notaVenta: notaVenta,
         fechaSolicitud: fechaSolicitud,
-        cliente: cliente,
-        local: local,
         estado: 'Solicitud enviada por bodega',
-        observaciones: document.getElementById('observaciones-bodega') ? document.getElementById('observaciones-bodega').value : '', // Asumiendo un campo de observaciones
-        items: items,
+        observaciones: '',
+        items: [],
         creadoPor: {
-            userId: user.id || user.uid || 'system_user',
-            displayName: user.displayName || 'Sistema'
+            userId: user.id,
+            username: user.username,
+            displayName: user.displayName
         },
-        historial: [{
-            fecha: new Date().toISOString(),
-            estado: 'Solicitud enviada por bodega',
-            observaciones: 'Solicitud creada.',
-            usuario: user.displayName || 'Sistema',
-            userId: user.id || user.uid || 'system_user'
-        }],
-        fechaEstimada: null,
-        fechaEntrega: null
+        historial: [
+            {
+                fecha: new Date().toISOString(),
+                estado: 'Solicitud enviada por bodega',
+                observaciones: '',
+                usuario: user.displayName,
+                userId: user.id
+            }
+        ]
     };
-
-    console.log("APP.JS: Nueva solicitud a guardar:", nuevaSolicitudData);
-
-    solicitudesRef.child(nuevoIdSolicitud).set(nuevaSolicitudData)
-        .then(() => {
-            document.getElementById('nueva-solicitud-form').reset();
-            const itemsContainerEl = document.getElementById('items-container');
-            if (itemsContainerEl) {
-                while (itemsContainerEl.children.length > 1) {
-                    const lastItemRow = itemsContainerEl.querySelector('.item-row:last-child');
-                    if(lastItemRow && itemsContainerEl.children.length > 1) itemsContainerEl.removeChild(lastItemRow); else break;
-                }
-                const firstItemRow = itemsContainerEl.querySelector('.item-row');
-                if (firstItemRow) {
-                    const firstSkuInput = firstItemRow.querySelector('.sku-input');
-                    const firstProductInput = firstItemRow.querySelector('.producto-input');
-                    const firstCantidadInput = firstItemRow.querySelector('input[name="cantidad[]"]');
-                    if (firstSkuInput) firstSkuInput.value = '';
-                    if (firstProductInput) firstProductInput.value = '';
-                    if (firstCantidadInput) firstCantidadInput.value = '';
-                }
-            }
-            if (typeof setFechaActual === 'function') setFechaActual();
-
-            mostrarAlerta(`Solicitud ${nuevoIdSolicitud} creada.`, 'success');
-            ocultarSincronizacion();
-
-            const formContainer = document.getElementById('nueva-solicitud-container');
-            if (formContainer && window.innerWidth < 768 && bootstrap.Collapse.getInstance(formContainer)) {
-                 bootstrap.Collapse.getInstance(formContainer).hide();
-            }
-        })
-        .catch(error => {
-            console.error('APP.JS: Error al guardar solicitud:', error);
-            mostrarAlerta('Error al crear solicitud: ' + error.message, 'danger');
-            ocultarSincronizacion();
+    
+    // Agregar los productos
+    for (let i = 0; i < productos.length; i++) {
+        nuevaSolicitud.items.push({
+            producto: productos[i],
+            cantidad: cantidades[i]
         });
+    }
+    
+    try {
+        // Guardar en Firebase
+        solicitudesRef.child(nuevaSolicitud.id).set(nuevaSolicitud)
+            .then(() => {
+                // Limpiar el formulario
+                document.getElementById('nueva-solicitud-form').reset();
+                
+                // Limpiar los items excepto el primero
+                const items = document.querySelectorAll('.item-row');
+                for (let i = 1; i < items.length; i++) {
+                    items[i].remove();
+                }
+                
+                // Restablecer el primer item
+                const firstProductInput = document.querySelector('input[name="producto[]"]');
+                const firstCantidadInput = document.querySelector('input[name="cantidad[]"]');
+                if (firstProductInput) firstProductInput.value = '';
+                if (firstCantidadInput) firstCantidadInput.value = '';
+                
+                // Restablecer la fecha actual
+                setFechaActual();
+                
+                // Ir a la primera página para ver la solicitud recién creada
+                if (typeof currentPageBodega !== 'undefined') {
+                    currentPageBodega = 1;
+                }
+                
+                mostrarAlerta('Solicitud creada correctamente.', 'success');
+                ocultarSincronizacion();
+                
+                // Cerrar el formulario en móviles
+                if (window.innerWidth < 768) {
+                    const nuevaSolicitudContainer = document.getElementById('nueva-solicitud-container');
+                    const bsCollapse = bootstrap.Collapse.getInstance(nuevaSolicitudContainer);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error al guardar la solicitud:', error);
+                mostrarAlerta('Error al crear la solicitud. Por favor, inténtalo de nuevo.', 'danger');
+                ocultarSincronizacion();
+            });
+    } catch (error) {
+        console.error('Error al guardar la solicitud:', error);
+        mostrarAlerta('Error al crear la solicitud. Por favor, inténtalo de nuevo.', 'danger');
+        ocultarSincronizacion();
+    }
 }
 
+// Manejar la actualización de estado incluyendo información del usuario actual
 function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, user, fechaEstimada = null, fechaEntrega = null) {
-    if (typeof solicitudes === 'undefined' || !Array.isArray(solicitudes)) {
-        mostrarAlerta('Error de datos: No se puede actualizar.', 'danger'); return;
-    }
     const solicitud = solicitudes.find(s => s.id === solicitudId);
-
-    if (!solicitud) {
-        mostrarAlerta('Error: Solicitud no encontrada.', 'danger'); return;
-    }
-    if (!user || (!user.id && !user.uid)) {
-        user = { id: 'sistema', uid: 'sistema', displayName: 'Sistema (Error Sesión)' };
-        console.warn("APP.JS: Usuario no válido en handleActualizarEstadoConUsuario, usando datos de sistema.");
-    }
-
-    mostrarSincronizacion('Actualizando estado...');
-
-    const solicitudActualizada = { ...solicitud };
-    solicitudActualizada.estado = nuevoEstado;
-    solicitudActualizada.observaciones = observaciones || solicitudActualizada.observaciones || '';
-
-    if (nuevoEstado === 'En fabricación') {
-        solicitudActualizada.fechaEstimada = fechaEstimada || null;
-        delete solicitudActualizada.fechaEntrega;
-    } else if (nuevoEstado === 'Entregado') {
-        solicitudActualizada.fechaEstimada = fechaEstimada || solicitudActualizada.fechaEstimada || null;
-        solicitudActualizada.fechaEntrega = fechaEntrega || new Date().toISOString().split('T')[0];
-    } else {
-        delete solicitudActualizada.fechaEstimada;
-        delete solicitudActualizada.fechaEntrega;
-    }
-
-    solicitudActualizada.historial = Array.isArray(solicitud.historial) ? [...solicitud.historial] : [];
-    solicitudActualizada.historial.push({
-        fecha: new Date().toISOString(),
-        estado: nuevoEstado,
-        observaciones: observaciones || '',
-        usuario: user.displayName,
-        userId: user.id || user.uid,
-        fechaEstimada: (nuevoEstado === 'En fabricación' || nuevoEstado === 'Entregado') ? (fechaEstimada || null) : null,
-        fechaEntrega: nuevoEstado === 'Entregado' ? (fechaEntrega || new Date().toISOString().split('T')[0]) : null
-    });
-
-    console.log("APP.JS: Actualizando solicitud en Firebase:", solicitudActualizada);
-    solicitudesRef.child(solicitudId).update(solicitudActualizada)
-        .then(() => {
-            const modalEl = document.getElementById('actualizar-estado-modal');
-            if (modalEl) {
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) modalInstance.hide();
+    
+    if (solicitud) {
+        try {
+            mostrarSincronizacion('Actualizando estado...');
+            
+            // Si no hay un user o no tiene id, creamos uno básico
+            if (!user) {
+                console.warn("Usuario no definido, usando usuario de respaldo");
+                user = {
+                    id: 'sistema_' + new Date().getTime(),
+                    displayName: 'Sistema'
+                };
+            } else if (!user.id) {
+                console.warn("Usuario sin ID, añadiendo ID provisional");
+                user.id = 'user_' + new Date().getTime();
             }
-            mostrarAlerta('Estado actualizado.', 'success');
+            
+            // Crear una copia de la solicitud para actualizar
+            const solicitudActualizada = {...solicitud};
+            
+            // Actualizar estado y observaciones
+            solicitudActualizada.estado = nuevoEstado;
+            solicitudActualizada.observaciones = observaciones;
+            
+            // Actualizar fechas según estado
+            if (nuevoEstado === 'En fabricación') {
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+                
+                // Limpiar fecha de entrega si existe
+                if (solicitudActualizada.fechaEntrega) delete solicitudActualizada.fechaEntrega;
+            } 
+            else if (nuevoEstado === 'Entregado') {
+                // Mantener la fecha estimada si está definida
+                if (fechaEstimada) solicitudActualizada.fechaEstimada = fechaEstimada;
+                
+                // Fecha de entrega siempre se establece para estado Entregado
+                solicitudActualizada.fechaEntrega = fechaEntrega || new Date().toISOString().split('T')[0];
+            }
+            else {
+                // Si cambia a otro estado, eliminar ambas fechas
+                if (solicitudActualizada.fechaEstimada) delete solicitudActualizada.fechaEstimada;
+                if (solicitudActualizada.fechaEntrega) delete solicitudActualizada.fechaEntrega;
+            }
+            
+            // Agregar al historial con información del usuario
+            solicitudActualizada.historial.push({
+                fecha: new Date().toISOString(),
+                estado: nuevoEstado,
+                observaciones: observaciones,
+                usuario: user.displayName || 'Usuario del sistema',
+                userId: user.id,
+                fechaEstimada: fechaEstimada,
+                fechaEntrega: fechaEntrega
+            });
+            
+            console.log("Guardando actualización:", solicitudActualizada);
+            
+            // Guardar en Firebase
+            solicitudesRef.child(solicitudId).update(solicitudActualizada)
+                .then(() => {
+                    // Cerrar el modal correctamente
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('actualizar-estado-modal'));
+                    if (modal) {
+                        modal.hide();
+                        
+                        // Limpiar backdrop manualmente
+                        setTimeout(() => {
+                            const backdrop = document.querySelector('.modal-backdrop');
+                            if (backdrop) {
+                                backdrop.remove();
+                            }
+                            document.body.classList.remove('modal-open');
+                            document.body.style.overflow = '';
+                            document.body.style.paddingRight = '';
+                        }, 300);
+                    }
+                    
+                    mostrarAlerta('Estado actualizado correctamente.', 'success');
+                    ocultarSincronizacion();
+                })
+                .catch(error => {
+                    console.error('Error al actualizar el estado:', error);
+                    mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
+                    ocultarSincronizacion();
+                });
+        } catch (error) {
+            console.error('Error al actualizar el estado:', error);
+            mostrarAlerta('Error al actualizar el estado: ' + error.message, 'danger');
             ocultarSincronizacion();
-        })
-        .catch(error => {
-            console.error('APP.JS: Error al actualizar estado en Firebase:', error);
-            mostrarAlerta('Error al actualizar estado: ' + error.message, 'danger');
-            ocultarSincronizacion();
-        });
-}
-window.handleActualizarEstadoConUsuario = handleActualizarEstadoConUsuario; // Exponer globalmente
-
-// Aplicar tema (si existe la función)
-function applyStoredTheme() {
-    // Implementación de tu theming aquí si la tienes
-}
-
-// Inicialización
-document.addEventListener('DOMContentLoaded', initApp);
-document.addEventListener('DOMContentLoaded', function() { // Para funciones que podrían no estar en authModule
-    if (typeof window.authModule !== 'undefined' && typeof window.authModule.initAuthSystem === 'function') {
-        window.authModule.initAuthSystem();
-    } else if (typeof initAuthSystem === 'function') { // Si initAuthSystem es global
-        initAuthSystem();
+        }
+    } else {
+        mostrarAlerta('No se encontró la solicitud.', 'danger');
+        ocultarSincronizacion();
     }
-    if (typeof applyStoredTheme === 'function') applyStoredTheme();
-});
+}
+
+// Sobrescribir el manejador de actualización de estado para incluir al usuario
+function overrideUpdateHandlers() {
+    // Referencia al formulario de actualización de estado
+    const actualizarEstadoForm = document.getElementById('actualizar-estado-form');
+    
+    if (actualizarEstadoForm) {
+        // Sobrescribir el evento submit
+        actualizarEstadoForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!currentUser) {
+                mostrarAlerta('Debes iniciar sesión para actualizar estados', 'warning');
+                return;
+            }
+            
+            const solicitudId = document.getElementById('solicitud-id').value;
+            const nuevoEstado = document.getElementById('nuevo-estado').value;
+            const observaciones = document.getElementById('observaciones').value;
+            
+            // Llamar a la función con el usuario actual
+            handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observaciones, currentUser);
+        }, true); // Usar true para capturar el evento antes que otros listeners
+    }
+}
+
+// Alternar entre tema claro y oscuro (para implementación futura)
+function toggleDarkMode() {
+    const body = document.body;
+    
+    if (body.classList.contains('dark-mode')) {
+        body.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+        mostrarAlerta('Tema claro activado', 'info');
+    } else {
+        body.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+        mostrarAlerta('Tema oscuro activado', 'info');
+    }
+}
+
+// Aplicar el tema guardado (para implementación futura)
+function applyStoredTheme() {
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+    }
+}
+
+// Inicializar el sistema de autenticación y sobreescribir handlers
+function initAuthSystem() {
+    // Sobrescribir los manejadores para incluir información de usuario
+    overrideUpdateHandlers();
+    
+    // Otras inicializaciones relacionadas con autenticación
+}
+
+// Llamar a la inicialización del sistema de autenticación después del DOMContentLoaded
+window.addEventListener('DOMContentLoaded', initAuthSystem);
+
+// Hacer global la función de manejo de cambio de página
+window.handlePageChange = handlePageChange;
