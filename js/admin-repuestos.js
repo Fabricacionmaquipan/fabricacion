@@ -13,7 +13,7 @@ let paginaActual = 1;
 const repuestosPorPagina = 10;
 
 // Referencias a elementos del DOM - se inicializarán después
-let tablaRepuestos;
+// let tablaRepuestos; // <--- LÍNEA ELIMINADA
 let repuestosInfo;
 let repuestosPagination;
 let btnNuevoRepuesto;
@@ -30,7 +30,8 @@ function inicializarAdminRepuestos() {
     console.log('Inicializando módulo de administración de repuestos...');
     
     // Inicializar referencias a elementos DOM
-    tablaRepuestos = document.getElementById('tabla-repuestos');
+    // tablaRepuestos se asignará aquí, pero usará la variable global de admin.js
+    tablaRepuestos = document.getElementById('tabla-repuestos'); 
     repuestosInfo = document.getElementById('repuestos-info');
     repuestosPagination = document.getElementById('repuestos-pagination');
     btnNuevoRepuesto = document.getElementById('btn-nuevo-repuesto');
@@ -95,7 +96,7 @@ function inicializarAdminRepuestos() {
 function cargarRepuestos() {
     console.log('Cargando repuestos...');
     
-    if (!tablaRepuestos) {
+    if (!tablaRepuestos) { // Ahora se refiere a la variable global de admin.js
         console.error('Error: La tabla de repuestos no está disponible');
         return;
     }
@@ -120,7 +121,7 @@ function cargarRepuestos() {
         repuestosActuales = window.repuestosModule.getRepuestos();
         
         // Ordenar por SKU
-        repuestosActuales.sort((a, b) => a.sku.localeCompare(b.sku));
+        repuestosActuales.sort((a, b) => (a.sku && b.sku) ? a.sku.localeCompare(b.sku) : 0);
         
         console.log(`Se cargaron ${repuestosActuales.length} repuestos`);
         
@@ -161,8 +162,8 @@ function filtrarRepuestos() {
         } else {
             repuestosFiltrados = repuestosActuales.filter(repuesto => {
                 return (
-                    repuesto.sku.toLowerCase().includes(terminoBusqueda) ||
-                    repuesto.nombre.toLowerCase().includes(terminoBusqueda) ||
+                    (repuesto.sku && repuesto.sku.toLowerCase().includes(terminoBusqueda)) ||
+                    (repuesto.nombre && repuesto.nombre.toLowerCase().includes(terminoBusqueda)) ||
                     (repuesto.categoria && repuesto.categoria.toLowerCase().includes(terminoBusqueda))
                 );
             });
@@ -320,6 +321,11 @@ function mostrarModalNuevoRepuesto() {
         repuestoIdInput.value = '';
     }
     
+    const repuestoSkuInput = document.getElementById('repuesto-sku');
+    if (repuestoSkuInput) {
+        repuestoSkuInput.readOnly = false; // Permitir editar SKU para nuevos repuestos
+    }
+    
     repuestoModalTitle.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Nuevo Repuesto';
     
     // Mostrar modal
@@ -361,7 +367,10 @@ function editarRepuesto(id) {
         const repuestoStockInput = document.getElementById('repuesto-stock');
         
         if (repuestoIdInput) repuestoIdInput.value = repuesto.id;
-        if (repuestoSkuInput) repuestoSkuInput.value = repuesto.sku;
+        if (repuestoSkuInput) {
+            repuestoSkuInput.value = repuesto.sku;
+            repuestoSkuInput.readOnly = true; // SKU no editable al editar
+        }
         if (repuestoNombreInput) repuestoNombreInput.value = repuesto.nombre;
         if (repuestoCategoriaInput) repuestoCategoriaInput.value = repuesto.categoria || '';
         if (repuestoStockInput) repuestoStockInput.value = repuesto.stock || 0;
@@ -475,15 +484,25 @@ function guardarRepuesto(event) {
         
         // Validaciones básicas
         if (!sku) {
-            throw new Error('El SKU es obligatorio');
+             if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+                window.componentesModule.mostrarAlerta('El SKU es obligatorio', 'danger');
+            } else {
+                alert('El SKU es obligatorio');
+            }
+            return;
         }
         
         if (!nombre) {
-            throw new Error('El nombre es obligatorio');
+            if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+                window.componentesModule.mostrarAlerta('El nombre es obligatorio', 'danger');
+            } else {
+                alert('El nombre es obligatorio');
+            }
+            return;
         }
         
         // Crear objeto repuesto
-        const repuesto = {
+        const repuestoData = {
             sku: sku,
             nombre: nombre,
             categoria: categoria || 'Sin categoría',
@@ -496,7 +515,8 @@ function guardarRepuesto(event) {
         }
         
         if (typeof window.repuestosModule.agregarRepuesto !== 'function' || 
-            typeof window.repuestosModule.actualizarRepuesto !== 'function') {
+            typeof window.repuestosModule.actualizarRepuesto !== 'function' ||
+            typeof window.repuestosModule.buscarRepuestoPorSku !== 'function') {
             throw new Error('Las funciones del módulo de repuestos no están disponibles');
         }
         
@@ -509,11 +529,25 @@ function guardarRepuesto(event) {
         
         if (id) {
             // Actualizar repuesto existente
-            repuesto.id = id;
-            promise = window.repuestosModule.actualizarRepuesto(repuesto);
+            repuestoData.id = id;
+            promise = window.repuestosModule.actualizarRepuesto(repuestoData);
         } else {
             // Agregar nuevo repuesto
-            promise = window.repuestosModule.agregarRepuesto(repuesto);
+            // Verificar si SKU ya existe para nuevos repuestos
+            const repuestoExistente = window.repuestosModule.buscarRepuestoPorSku(sku);
+            if(repuestoExistente) {
+                const errorMsg = `El SKU '${sku}' ya existe. No se puede crear el repuesto.`;
+                 if (window.componentesModule && typeof window.componentesModule.mostrarAlerta === 'function') {
+                    window.componentesModule.mostrarAlerta(errorMsg, 'danger');
+                } else {
+                    alert(errorMsg);
+                }
+                if (window.componentesModule && typeof window.componentesModule.ocultarSincronizacion === 'function') {
+                    window.componentesModule.ocultarSincronizacion();
+                }
+                return; // Detener ejecución si SKU ya existe
+            }
+            promise = window.repuestosModule.agregarRepuesto(repuestoData);
         }
         
         promise
@@ -571,18 +605,29 @@ function mostrarInterfazCargaMasiva() {
     // Verificar que el módulo de carga masiva esté disponible
     if (!window.cargaMasivaRepuestosModule) {
         console.error('Error: El módulo de carga masiva no está disponible en window.cargaMasivaRepuestosModule');
-        alert('Error: No se pudo cargar el módulo de importación masiva. Asegúrate de que el archivo carga-masiva-repuestos.js está incluido.');
+        // Intenta usar la función simplificada como fallback si está en carga-masiva-solucion.js
+        if (typeof window.mostrarInterfazImportacionSimplificada === 'function') {
+            console.log("Módulo original no encontrado, usando mostrarInterfazImportacionSimplificada()...");
+            window.mostrarInterfazImportacionSimplificada();
+        } else {
+            alert('Error: No se pudo cargar el módulo de importación masiva.');
+        }
         return;
     }
     
     if (typeof window.cargaMasivaRepuestosModule.mostrarInterfazImportacion !== 'function') {
         console.error('Error: La función mostrarInterfazImportacion no está disponible en el módulo de carga masiva');
-        alert('Error: El módulo de importación masiva está incompleto. Contacta con el administrador del sistema.');
+         if (typeof window.mostrarInterfazImportacionSimplificada === 'function') {
+            console.log("Función original no encontrada en módulo, usando mostrarInterfazImportacionSimplificada()...");
+            window.mostrarInterfazImportacionSimplificada();
+        } else {
+            alert('Error: El módulo de importación masiva está incompleto.');
+        }
         return;
     }
     
     // Todo está correcto, mostrar la interfaz
-    console.log('Invocando mostrarInterfazImportacion()...');
+    console.log('Invocando window.cargaMasivaRepuestosModule.mostrarInterfazImportacion()...');
     window.cargaMasivaRepuestosModule.mostrarInterfazImportacion();
 }
 
@@ -602,29 +647,45 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Verificar si estamos en la página de administración
     const adminPanel = document.getElementById('admin-panel');
-    if (adminPanel) {
-        console.log("Panel de administración encontrado, inicializando módulo de repuestos...");
-        
-        // Esperar un poco para asegurarse de que todo esté cargado, incluyendo Bootstrap
-        setTimeout(() => {
-            inicializarAdminRepuestos();
-        }, 500);
+    const repuestosContent = document.getElementById('repuestos-content');
+
+    if (adminPanel && repuestosContent && repuestosContent.classList.contains('show')) { // Si el panel de admin y la pestaña de repuestos están visibles
+        console.log("Panel de administración y pestaña de repuestos activos, inicializando módulo de repuestos...");
+        setTimeout(() => { // Pequeño retardo para asegurar que otros scripts/Bootstrap estén listos
+            if (typeof inicializarAdminRepuestos === 'function') {
+                 inicializarAdminRepuestos();
+            } else {
+                console.error("inicializarAdminRepuestos no está definida globalmente.");
+            }
+        }, 100); // Ajustado a 100ms
     } else {
-        console.log("Panel de administración no encontrado, no se inicializa el módulo de repuestos");
+         console.log("Panel de admin no activo o pestaña de repuestos no visible al cargar, la inicialización se hará al mostrar la pestaña.");
     }
 });
 
-// También inicializar cuando se haga clic en la pestaña de repuestos
+// También inicializar/recargar cuando se haga clic en la pestaña de repuestos
 document.addEventListener('DOMContentLoaded', function() {
     const repuestosTab = document.getElementById('repuestos-tab');
     if (repuestosTab) {
-        console.log("Pestaña de repuestos encontrada, añadiendo event listener...");
+        console.log("Pestaña de repuestos encontrada, añadiendo event listener 'shown.bs.tab'...");
         repuestosTab.addEventListener('shown.bs.tab', function() {
-            console.log("Pestaña de repuestos activada, verificando inicialización...");
-            if (window.adminRepuestosModule) {
+            console.log("Pestaña de repuestos activada ('shown.bs.tab'), verificando inicialización...");
+            // Es posible que inicializarAdminRepuestos ya se haya llamado si la pestaña estaba activa al cargar.
+            // Pero llamar cargarRepuestos es seguro para asegurar que los datos se muestren.
+            if (window.adminRepuestosModule && typeof window.adminRepuestosModule.cargarRepuestos === 'function') {
                 window.adminRepuestosModule.cargarRepuestos();
+            } else if (typeof inicializarAdminRepuestos === 'function' && !window.adminRepuestosModule) {
+                 // Si el módulo aún no se ha expuesto pero la función de inicialización sí, podría ser un problema de orden.
+                 // Por seguridad, se podría intentar inicializar aquí si no se hizo antes.
+                 console.log("adminRepuestosModule no existe aún, intentando inicializar...");
+                 inicializarAdminRepuestos(); // Asegura que se inicialice si no lo hizo antes
+                 if(window.adminRepuestosModule) window.adminRepuestosModule.cargarRepuestos();
+            } else {
+                console.warn("No se pudo cargar/recargar repuestos al activar la pestaña.");
             }
         });
+    } else {
+        console.warn("Elemento con ID 'repuestos-tab' no encontrado.");
     }
 });
 
