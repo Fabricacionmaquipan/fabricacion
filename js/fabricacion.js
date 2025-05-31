@@ -376,7 +376,19 @@ function cargarDatosFabricacion() {
         const cliente = solicitud.cliente || 'No especificado';
         const local = solicitud.local || 'No especificado';
         
-        // Construir HTML de la fila - ASEGURANDO QUE COINCIDE CON EL ORDEN DE LAS COLUMNAS DEL ENCABEZADO
+        // --- INICIO DE LA MODIFICACIÓN PARA EL BOTÓN PDF ---
+        let botonPDFHTML = '';
+        // El botón PDF aparecerá si el estado es "En fabricación" O "Entregado"
+        if (solicitud.estado === 'En fabricación' || solicitud.estado === 'Entregado') {
+            botonPDFHTML = `
+                <button class="btn btn-sm btn-success btn-descargar-pdf" data-id="${solicitud.id}">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </button>
+            `;
+        }
+        // --- FIN DE LA MODIFICACIÓN PARA EL BOTÓN PDF ---
+
+        // Construir HTML de la fila
         tr.innerHTML = `
             <td data-label="ID">${idCorto}</td>
             <td data-label="Nota Venta">${solicitud.notaVenta || 'N/A'}</td>
@@ -398,11 +410,7 @@ function cargarDatosFabricacion() {
                             <i class="fas fa-edit me-1"></i>Estado
                         </button>
                     ` : ''}
-                    ${solicitud.estado === 'Entregado' ? `
-                        <button class="btn btn-sm btn-success btn-descargar-pdf" data-id="${solicitud.id}">
-                            <i class="fas fa-file-pdf me-1"></i>PDF
-                        </button>
-                    ` : ''}
+                    ${botonPDFHTML} {/* Se inserta el botón PDF aquí */}
                 </div>
             </td>
         `;
@@ -444,56 +452,39 @@ function actualizarEncabezadoTablaFabricacion() {
 
 // Generar PDF de entrega
 function generarPDFEntrega(solicitudId) {
-    console.log('Función generarPDFEntrega INVOCADA con ID:', solicitudId); // NUEVO LOG
+    console.log('Función generarPDFEntrega INVOCADA con ID:', solicitudId); 
 
     // Buscar la solicitud
     const solicitud = solicitudes.find(s => s.id === solicitudId);
-    console.log('Solicitud encontrada en generarPDFEntrega:', solicitud); // NUEVO LOG
+    console.log('Solicitud encontrada en generarPDFEntrega:', solicitud); 
     if (!solicitud) {
-        mostrarAlerta('No se encontró la solicitud para generar PDF.', 'danger'); // Mensaje un poco diferente para distinguir
+        mostrarAlerta('No se encontró la solicitud para generar PDF.', 'danger'); 
         console.error('No se encontró la solicitud con ID:', solicitudId, 'en el array global "solicitudes"');
         return;
     }
     
-    // --- INICIO DE LA MODIFICACIÓN ---
-    // Se elimina o comenta la siguiente condición para permitir generar el PDF
-    // en estados diferentes a 'Entregado'.
-    /*
-    if (solicitud.estado !== 'Entregado') {
-        mostrarAlerta('Solo se pueden generar guías para solicitudes entregadas.', 'warning');
-        return;
-    }
-    */
-    // --- FIN DE LA MODIFICACIÓN ---
+    // Ya no se restringe por estado aquí, la lógica de cuándo llamar a esta función
+    // (automáticamente o por botón) ya está manejada.
     
     // Mostrar loading mientras se genera el PDF
     mostrarSincronizacion('Generando PDF...');
     
-    // Generar el PDF utilizando la biblioteca jsPDF si está disponible
-    if (typeof jspdf === 'undefined') {
-        // Verificar si la variable global jsPDF está disponible (nombre alternativo)
-        if (typeof jsPDF === 'undefined') {
-            // Cargar jsPDF dinámicamente si no está disponible
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            script.onload = function() {
-                // También necesitamos html2canvas
-                const script2 = document.createElement('script');
-                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-                script2.onload = function() {
-                    generarPDFConLibreria(solicitud);
-                };
-                document.head.appendChild(script2);
-            };
-            document.head.appendChild(script);
-        } else {
-            // Si jsPDF está disponible con nombre alternativo
-            generarPDFConLibreria(solicitud);
+    // Verificar si jsPDF y html2canvas están cargados
+    if (typeof jspdf === 'undefined' || typeof html2canvas === 'undefined') {
+        console.warn("jsPDF o html2canvas no están cargados globalmente. Intentando cargar dinámicamente o usando fallback.");
+        // Intenta cargar dinámicamente o simplemente confía en que `generarPDFConLibreria` o `generarPDFFallback` lo manejen.
+        // Para simplificar, si no están, la llamada a generarPDFConLibreria probablemente fallará y caerá en su catch.
+        // Podrías agregar una lógica de carga dinámica aquí si es necesario, o asegurar que se carguen en index.html.
+        // Por ahora, si no están, el fallback debería activarse desde generarPDFConLibreria.
+        if ((typeof jsPDF === 'undefined' && typeof jspdf === 'undefined') || typeof html2canvas === 'undefined') {
+             console.log("Librerías PDF no detectadas, procediendo a fallback.");
+             generarPDFFallback(solicitud);
+             ocultarSincronizacion(); // Asegurarse de ocultar la sincronización
+             return;
         }
-    } else {
-        // Si jsPDF ya está disponible
-        generarPDFConLibreria(solicitud);
     }
+    
+    generarPDFConLibreria(solicitud);
 }
 
 // Generar el PDF usando jsPDF
@@ -512,110 +503,58 @@ function generarPDFConLibreria(solicitud) {
         const style = document.createElement('style');
         style.textContent = `
             #pdf-container {
-                font-family: Arial, sans-serif;
-                padding: 20px;
-                color: #000;
+                font-family: Arial, sans-serif; padding: 20px; color: #000;
             }
-            #pdf-container .header {
-                text-align: center;
-                margin-bottom: 20px;
-            }
-            #pdf-container .title {
-                font-size: 24px;
-                font-weight: bold;
-                margin-bottom: 5px;
-            }
-            #pdf-container .subtitle {
-                font-size: 16px;
-                color: #666;
-            }
-            #pdf-container .info-section {
-                margin-bottom: 20px;
-            }
-            #pdf-container .info-row {
-                display: flex;
-                margin-bottom: 5px;
-            }
-            #pdf-container .info-label {
-                width: 150px;
-                font-weight: bold;
-            }
-            #pdf-container .info-value {
-                flex: 1;
-            }
-            #pdf-container table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-bottom: 20px;
-            }
-            #pdf-container th, #pdf-container td {
-                border: 1px solid #ddd;
-                padding: 8px;
-                text-align: left;
-            }
-            #pdf-container th {
-                background-color: #f2f2f2;
-            }
-            #pdf-container .footer {
-                margin-top: 50px;
-                text-align: center;
-            }
-            #pdf-container .signatures {
-                display: flex;
-                justify-content: space-between;
-                margin-top: 100px;
-            }
-            #pdf-container .signature {
-                border-top: 1px solid #000;
-                width: 200px;
-                text-align: center;
-                padding-top: 5px;
-            }
-        `;
+            #pdf-container .header { text-align: center; margin-bottom: 20px; }
+            #pdf-container .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+            #pdf-container .subtitle { font-size: 16px; color: #666; }
+            #pdf-container .info-section { margin-bottom: 20px; }
+            #pdf-container .info-row { display: flex; margin-bottom: 5px; }
+            #pdf-container .info-label { width: 150px; font-weight: bold; }
+            #pdf-container .info-value { flex: 1; }
+            #pdf-container table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            #pdf-container th, #pdf-container td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            #pdf-container th { background-color: #f2f2f2; }
+            #pdf-container .footer { margin-top: 50px; text-align: center; font-size: 12px; color: #888; }
+            #pdf-container .signatures { display: flex; justify-content: space-between; margin-top: 100px; }
+            #pdf-container .signature { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
+        `; // Estilos resumidos, puedes poner los tuyos completos
         document.head.appendChild(style);
         
         // Verificar si html2canvas está disponible
         if (typeof html2canvas === 'undefined') {
-            console.error('html2canvas no está disponible, usando fallback');
+            console.error('html2canvas no está disponible, usando fallback para PDF.');
             generarPDFFallback(solicitud);
-            document.body.removeChild(tempDiv);
-            document.head.removeChild(style);
+            if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+            if (style.parentNode) document.head.removeChild(style);
+            ocultarSincronizacion(); // Asegurarse de ocultar
             return;
         }
         
         // Usar html2canvas para convertir el HTML a una imagen
         html2canvas(tempDiv, { 
-            scale: 2,
-            useCORS: true,
-            logging: false,
-            allowTaint: true
+            scale: 2, useCORS: true, logging: false, allowTaint: true
         }).then(canvas => {
             try {
-                // Verificar qué versión de jsPDF está disponible
                 let pdf;
-                if (typeof jspdf !== 'undefined') {
-                    const { jsPDF } = window.jspdf;
-                    pdf = new jsPDF('p', 'mm', 'a4');
-                } else if (typeof jsPDF !== 'undefined') {
+                if (typeof jspdf !== 'undefined' && typeof jspdf.jsPDF === 'function') { // Comprobar la estructura correcta de jspdf.jsPDF
+                    pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+                } else if (typeof jsPDF === 'function') { // Comprobar jsPDF global
                     pdf = new jsPDF('p', 'mm', 'a4');
                 } else {
-                    throw new Error('jsPDF no está disponible');
+                    throw new Error('Librería jsPDF no está disponible o no es una función constructora.');
                 }
                 
-                // Añadir la imagen al PDF
                 const imgData = canvas.toDataURL('image/png');
-                const imgWidth = 210; // A4 width in mm
-                const pageHeight = 297; // A4 height in mm
+                const imgWidth = 210; 
+                const pageHeight = 297; 
                 const imgHeight = canvas.height * imgWidth / canvas.width;
-                
                 let heightLeft = imgHeight;
                 let position = 0;
                 
-                // Añadir primera página
                 pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
                 heightLeft -= pageHeight;
                 
-                // Añadir páginas adicionales si es necesario
                 while (heightLeft >= 0) {
                     position = heightLeft - imgHeight;
                     pdf.addPage();
@@ -623,212 +562,107 @@ function generarPDFConLibreria(solicitud) {
                     heightLeft -= pageHeight;
                 }
                 
-                // Guardar el PDF
                 pdf.save(`Guia_Entrega_${solicitud.notaVenta}_${Date.now()}.pdf`);
                 
-                // Eliminar elementos temporales
-                document.body.removeChild(tempDiv);
-                document.head.removeChild(style);
-                
-                // Ocultar loading
-                ocultarSincronizacion();
-                
-                // Mostrar mensaje de éxito
                 mostrarAlerta('Guía de entrega generada correctamente.', 'success');
             } catch (error) {
-                console.error('Error al crear PDF:', error);
+                console.error('Error al crear PDF con jsPDF:', error);
                 generarPDFFallback(solicitud);
-                
-                // Eliminar elementos temporales
-                document.body.removeChild(tempDiv);
-                document.head.removeChild(style);
+            } finally { // Asegurar limpieza y ocultar sincronización
+                if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+                if (style.parentNode) document.head.removeChild(style);
+                ocultarSincronizacion();
             }
         }).catch(error => {
             console.error('Error en html2canvas:', error);
             generarPDFFallback(solicitud);
-            
-            // Eliminar elementos temporales
-            document.body.removeChild(tempDiv);
-            document.head.removeChild(style);
+            if (tempDiv.parentNode) document.body.removeChild(tempDiv);
+            if (style.parentNode) document.head.removeChild(style);
+            ocultarSincronizacion();
         });
     } catch (error) {
-        console.error('Error al generar PDF:', error);
+        console.error('Error general al generar PDF:', error);
         ocultarSincronizacion();
         mostrarAlerta('Error al generar la guía de entrega: ' + error.message, 'danger');
-        
-        // Fallback simple si falla jsPDF
         generarPDFFallback(solicitud);
     }
 }
 
 // Método alternativo para generar un PDF (fallback)
 function generarPDFFallback(solicitud) {
-    // Crear una ventana nueva
     const printWindow = window.open('', '_blank');
-    
-    // Escribir el contenido HTML
     printWindow.document.write(`
         <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Guía de Entrega - ${solicitud.notaVenta}</title>
-            <meta charset="utf-8">
-            <style>
-                body { font-family: Arial, sans-serif; margin: 20px; }
-                .header { text-align: center; margin-bottom: 20px; }
-                .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
-                .subtitle { font-size: 16px; color: #666; }
-                .info-section { margin-bottom: 20px; }
-                .info-row { display: flex; margin-bottom: 5px; }
-                .info-label { width: 150px; font-weight: bold; }
-                .info-value { flex: 1; }
-                table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                th { background-color: #f2f2f2; }
-                .footer { margin-top: 50px; text-align: center; }
-                .signatures { display: flex; justify-content: space-between; margin-top: 100px; }
-                .signature { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
-                @media print {
-                    body { margin: 0; }
-                    button { display: none; }
-                }
-            </style>
-        </head>
-        <body>
+        <html><head><title>Guía de Entrega - ${solicitud.notaVenta}</title><meta charset="utf-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .header { text-align: center; margin-bottom: 20px; } .title { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+            .subtitle { font-size: 16px; color: #666; } .info-section { margin-bottom: 20px; }
+            .info-row { display: flex; margin-bottom: 5px; } .info-label { width: 150px; font-weight: bold; }
+            .info-value { flex: 1; } table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; } th { background-color: #f2f2f2; }
+            .footer { margin-top: 50px; text-align: center; font-size:12px; color: #888; }
+            .signatures { display: flex; justify-content: space-between; margin-top: 100px; }
+            .signature { border-top: 1px solid #000; width: 200px; text-align: center; padding-top: 5px; }
+            @media print { body { margin: 0; } button { display: none; } }
+        </style></head><body>
             ${generarContenidoGuiaEntrega(solicitud)}
             <div style="text-align: center; margin-top: 20px;">
                 <button onclick="window.print()" style="padding: 10px 20px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer;">
                     Imprimir Guía
                 </button>
             </div>
-            <script>
-                // Ofrecer impresión automática después de 1 segundo
-                setTimeout(function() {
-                    if (confirm('¿Desea imprimir la guía de entrega ahora?')) {
-                        window.print();
-                    }
-                }, 1000);
-            </script>
-        </body>
-        </html>
+            <script> setTimeout(function() { if (confirm('¿Desea imprimir la guía de entrega ahora?')) { window.print(); } }, 1000); </script>
+        </body></html>
     `);
-    
     printWindow.document.close();
-    
-    // Ocultar loading
-    ocultarSincronizacion();
+    ocultarSincronizacion(); // Asegurarse de ocultar aquí también
 }
 
 // Generar el contenido HTML de la guía de entrega
 function generarContenidoGuiaEntrega(solicitud) {
-    // Obtener fecha estimada
     let fechaEstimada = 'No establecida';
     if (solicitud.fechaEstimada) {
         fechaEstimada = formatDate(solicitud.fechaEstimada);
     }
-    
-    // Obtener fecha de entrega real
     let fechaEntrega = 'Pendiente';
     if (solicitud.fechaEntrega) {
         fechaEntrega = formatDate(solicitud.fechaEntrega);
     } else if (solicitud.estado === 'Entregado' && solicitud.historial) {
-        // Buscar en el historial si no está como propiedad directa
-        const entregaHistorial = [...solicitud.historial]
-            .reverse()
-            .find(h => h.estado === 'Entregado' && h.fechaEntrega);
-        
+        const entregaHistorial = [...solicitud.historial].reverse().find(h => h.estado === 'Entregado' && h.fechaEntrega);
         if (entregaHistorial && entregaHistorial.fechaEntrega) {
             fechaEntrega = formatDate(entregaHistorial.fechaEntrega);
         }
     }
-    
-    // Obtener cliente y local (o usar valores por defecto)
     const cliente = solicitud.cliente || 'No especificado';
     const local = solicitud.local || 'No especificado';
-    
-    // Obtener productos
     const productosHTML = solicitud.items ? solicitud.items.map(item => `
-        <tr>
-            <td>${item.sku || '-'}</td>
-            <td>${item.producto}</td>
-            <td>${item.cantidad}</td>
-        </tr>
-    `).join('') : '<tr><td colspan="3">No hay productos registrados</td></tr>';
+        <tr><td>${item.sku || '-'}</td><td>${item.producto}</td><td>${item.cantidad}</td></tr>`).join('') 
+        : '<tr><td colspan="3">No hay productos registrados</td></tr>';
     
-    // Crear el HTML para la guía de entrega
     return `
-        <div class="header">
-            <div class="title">GUÍA DE ENTREGA</div>
-            <div class="subtitle">Sistema de Solicitudes</div>
-        </div>
-        
+        <div class="header"> <div class="title">GUÍA DE ENTREGA</div> <div class="subtitle">Sistema de Solicitudes</div> </div>
         <div class="info-section">
-            <div class="info-row">
-                <div class="info-label">ID Solicitud:</div>
-                <div class="info-value">${solicitud.id}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Nota de Venta:</div>
-                <div class="info-value">${solicitud.notaVenta}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Cliente:</div>
-                <div class="info-value">${cliente}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Local:</div>
-                <div class="info-value">${local}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Fecha de Solicitud:</div>
-                <div class="info-value">${formatDate(solicitud.fechaSolicitud)}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Fecha Estimada:</div>
-                <div class="info-value">${fechaEstimada}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Fecha de Entrega:</div>
-                <div class="info-value">${fechaEntrega}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Estado:</div>
-                <div class="info-value">${solicitud.estado}</div>
-            </div>
-            ${solicitud.observaciones ? `
-            <div class="info-row">
-                <div class="info-label">Observaciones:</div>
-                <div class="info-value">${solicitud.observaciones}</div>
-            </div>
-            ` : ''}
+            <div class="info-row"><div class="info-label">ID Solicitud:</div><div class="info-value">${solicitud.id}</div></div>
+            <div class="info-row"><div class="info-label">Nota de Venta:</div><div class="info-value">${solicitud.notaVenta}</div></div>
+            <div class="info-row"><div class="info-label">Cliente:</div><div class="info-value">${cliente}</div></div>
+            <div class="info-row"><div class="info-label">Local:</div><div class="info-value">${local}</div></div>
+            <div class="info-row"><div class="info-label">Fecha de Solicitud:</div><div class="info-value">${formatDate(solicitud.fechaSolicitud)}</div></div>
+            <div class="info-row"><div class="info-label">Fecha Estimada:</div><div class="info-value">${fechaEstimada}</div></div>
+            <div class="info-row"><div class="info-label">Fecha de Entrega:</div><div class="info-value">${fechaEntrega}</div></div>
+            <div class="info-row"><div class="info-label">Estado:</div><div class="info-value">${solicitud.estado}</div></div>
+            ${solicitud.observaciones ? `<div class="info-row"><div class="info-label">Observaciones:</div><div class="info-value">${solicitud.observaciones}</div></div>` : ''}
         </div>
-        
-        <div>
-            <h3>Productos</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>SKU</th>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${productosHTML}
-                </tbody>
-            </table>
+        <div> <h3>Productos</h3>
+            <table><thead><tr><th>SKU</th><th>Producto</th><th>Cantidad</th></tr></thead><tbody>${productosHTML}</tbody></table>
         </div>
-        
-        <div class="footer">
-            <p>Documento generado el ${new Date().toLocaleString()}</p>
-        </div>
-        
-        <div class="signatures">
-            <div class="signature">Entregado por</div>
-            <div class="signature">Recibido por</div>
-        </div>
+        <div class="footer"><p>Documento generado el ${new Date().toLocaleString('es-CL')}</p></div>
+        <div class="signatures"> <div class="signature">Entregado por</div> <div class="signature">Recibido por</div> </div>
     `;
 }
 
 // Opcional: Exponer generarPDFEntrega globalmente si es necesario para app.js
 // window.generarPDFEntrega = generarPDFEntrega;
+
+// Asegúrate que las funciones mostrarAlerta, mostrarSincronizacion, ocultarSincronizacion
+// y la variable global 'solicitudes' estén definidas y accesibles.
