@@ -4,36 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Solicitudes</title>
-    <!-- Bootstrap 5 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <!-- Font Awesome para iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts - Montserrat y Roboto -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
     
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
-    <!-- Chart.js para gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
     
-    <!-- Html2Canvas para exportación de gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     
-    <!-- Estilos CSS personalizados -->
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/estilos-dashboards.css">
     <link rel="stylesheet" href="css/repuestos-styles.css">
 
-    <!-- Bibliotecas para generación de PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-    <!-- Barra de navegación principal -->
     <nav class="navbar navbar-expand-lg navbar-dark sticky-top">
         <div class="container-fluid px-lg-4">
             <a class="navbar-brand d-flex align-items-center" href="#">
@@ -65,7 +56,6 @@
 
     <div class="content-wrapper">
         <div class="container py-4">
-            <!-- Pantalla de inicio de sesión -->
             <div id="login-screen" class="text-center">
                 <div class="login-container">
                     <div class="login-header mb-4">
@@ -112,6 +102,8 @@
                                         <option value="bodega">Bodega</option>
                                         <option value="fabricacion">Fabricación</option>
                                         <option value="admin">Administrador</option>
+                                        {/* MODIFICADO: Opción para Visualizador */}
+                                        <option value="visualizador">Visualizador</option>
                                     </select>
                                 </div>
                             </div>
@@ -126,18 +118,23 @@
                             <div class="row text-start mt-2">
                                 <div class="col-md-4 mb-2">
                                     <strong>Bodega:</strong><br>
-                                    Usuario: bodega1<br>
-                                    Clave: bodega123
+                                    Usuario: bodega<br> {/* Ajustado para coincidir con auth.js */}
+                                    Clave: Bodega2025
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <strong>Fabricación:</strong><br>
-                                    Usuario: fabricacion1<br>
-                                    Clave: fabrica123
+                                    Usuario: fabricacion<br> {/* Ajustado para coincidir con auth.js */}
+                                    Clave: Pelaoyjoel
                                 </div>
                                 <div class="col-md-4 mb-2">
                                     <strong>Administrador:</strong><br>
-                                    Usuario: admin1<br>
-                                    Clave: admin123
+                                    Usuario: admin<br> {/* Ajustado para coincidir con auth.js */}
+                                    Clave: Mono1700..
+                                </div>
+                                <div class="col-md-4 mb-2"> {/* CREDENCIALES DE PRUEBA VISUALIZADOR */}
+                                    <strong>Visualizador:</strong><br>
+                                    Usuario: viewer<br>
+                                    Clave: viewer123
                                 </div>
                             </div>
                         </div>
@@ -145,7 +142,7 @@
                 </div>
             </div>
 
-            <!-- Panel de Bodega - sección del formulario y tabla que necesita corrección -->
+            {/* Panel de Bodega - sección del formulario y tabla que necesita corrección */}
 <div id="bodega-panel" style="display: none;">
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap">
         <h2 class="panel-title mb-0">
@@ -162,7 +159,7 @@
         </div>
     </div>
     
-<!-- Formulario de nueva solicitud -->
+{/* Formulario de nueva solicitud */}
 <div class="collapse show" id="nueva-solicitud-container">
     <div class="card card-form mb-4">
         <div class="card-header">
@@ -186,7 +183,7 @@
                         <input type="date" class="form-control" id="fecha-solicitud" required readonly>
                         <small class="text-muted">Fecha establecida automáticamente</small>
                     </div>
-                    <!-- Campos de Cliente y Local -->
+                    {/* Campos de Cliente y Local */}
                     <div class="col-md-6">
                         <label for="cliente" class="form-label">Cliente</label>
                         <input type="text" class="form-control" id="cliente" placeholder="Nombre del cliente">
@@ -208,21 +205,21 @@
                     <div class="items-container" id="items-container">
                         <div class="item-row">
                             <div class="row g-2 align-items-center">
-                                <!-- Campo SKU -->
+                                {/* Campo SKU */}
                                 <div class="col-md-3 position-relative">
                                     <input type="text" class="form-control sku-input" placeholder="SKU" name="sku[]" autocomplete="off">
                                     <div class="dropdown-menu producto-suggestions"></div>
                                 </div>
-                                <!-- Campo Nombre del producto -->
+                                {/* Campo Nombre del producto */}
                                 <div class="col-md-4 position-relative">
                                     <input type="text" class="form-control producto-input" placeholder="Nombre del producto" name="producto[]" required autocomplete="off">
                                     <div class="dropdown-menu producto-suggestions"></div>
                                 </div>
-                                <!-- Campo Cantidad -->
+                                {/* Campo Cantidad */}
                                 <div class="col-md-3">
                                     <input type="number" class="form-control" placeholder="Cantidad" name="cantidad[]" required>
                                 </div>
-                                <!-- Botón eliminar item -->
+                                {/* Botón eliminar item */}
                                 <div class="col-md-2">
                                     <button type="button" class="btn btn-outline-danger w-100 remove-item">
                                         <i class="fas fa-trash-alt"></i>
@@ -243,14 +240,14 @@
     </div>
 </div>
     
-    <!-- Historial de solicitudes -->
+    {/* Historial de solicitudes */}
 <div class="collapse show" id="historial-bodega">
     <div class="card mb-4">
         <div class="card-header">
             <div class="d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="fas fa-history me-2"></i>Historial de Solicitudes</h5>
                 <div class="d-flex gap-2">
-                    <!-- Añadir menú desplegable para filtrar por estado -->
+                    {/* Añadir menú desplegable para filtrar por estado */}
                     <div class="dropdown d-none d-md-block">
                         <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
                             <i class="fas fa-filter me-1"></i> Todas
@@ -263,7 +260,7 @@
                         </ul>
                     </div>
                     
-                    <!-- Actualizar campo de búsqueda -->
+                    {/* Actualizar campo de búsqueda */}
                     <div class="input-group input-group-sm">
                         <input type="text" class="form-control" placeholder="Buscar..." id="buscar-solicitud-bodega">
                         <button class="btn btn-outline-secondary" type="button">
@@ -288,18 +285,18 @@
                     </tr>
                 </thead>
                 <tbody id="tabla-solicitudes-bodega">
-                    <!-- Se llenará con JavaScript -->
+                    {/* Se llenará con JavaScript */}
                 </tbody>
             </table>
         </div>
         <div class="card-footer p-2">
-            <!-- Aquí se insertarán los controles de paginación -->
+            {/* Aquí se insertarán los controles de paginación */}
         </div>
     </div>
 </div>
 </div>
 
-            <!-- Panel de Fabricación -->
+            {/* Panel de Fabricación */}
             <div id="fabricacion-panel" style="display: none;">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h2 class="panel-title mb-0">
@@ -345,49 +342,50 @@
                                 </tr>
                             </thead>
                             <tbody id="tabla-solicitudes-fabricacion">
-                                <!-- Se llenará con JavaScript -->
+                                {/* Se llenará con JavaScript */}
                             </tbody>
                         </table>
                     </div>
                     <div class="card-footer p-2">
-                        <!-- Aquí se insertarán los controles de paginación -->
+                        {/* Aquí se insertarán los controles de paginación */}
                     </div>
                 </div>
             </div>
 
-            <!-- Panel de Admin (Actualizado con Tabs) -->
+            {/* Panel de Admin (Actualizado con Tabs) */}
             <div id="admin-panel" style="display: none;">
                 <h2 class="panel-title mb-3">
                     <i class="fas fa-user-shield me-2"></i>Panel de Administración
                 </h2>
                 
                 <ul class="nav nav-tabs mb-4" id="adminTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
+                    {/* MODIFICADO: IDs añadidos a los <li> para control de visibilidad */}
+                    <li class="nav-item" role="presentation" id="solicitudes-tab-item">
                         <button class="nav-link active" id="solicitudes-tab" data-bs-toggle="tab" data-bs-target="#solicitudes-content" type="button" role="tab" aria-controls="solicitudes-content" aria-selected="true">
                             <i class="fas fa-list me-1"></i> Solicitudes
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    <li class="nav-item" role="presentation" id="usuarios-tab-item">
                         <button class="nav-link" id="usuarios-tab" data-bs-toggle="tab" data-bs-target="#usuarios-content" type="button" role="tab" aria-controls="usuarios-content" aria-selected="false">
                             <i class="fas fa-users-cog me-1"></i> Usuarios
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    <li class="nav-item" role="presentation" id="repuestos-tab-item">
                        <button class="nav-link" id="repuestos-tab" data-bs-toggle="tab" data-bs-target="#repuestos-content" type="button" role="tab" aria-controls="repuestos-content" aria-selected="false">
                            <i class="fas fa-tools me-1"></i> Repuestos
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    <li class="nav-item" role="presentation" id="dashboard-tab-item">
                         <button class="nav-link" id="dashboard-tab" data-bs-toggle="tab" data-bs-target="#dashboard-content" type="button" role="tab" aria-controls="dashboard-content" aria-selected="false">
                             <i class="fas fa-chart-line me-1"></i> Dashboard
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    <li class="nav-item" role="presentation" id="reportes-tab-item">
                         <button class="nav-link" id="reportes-tab" data-bs-toggle="tab" data-bs-target="#reportes-content" type="button" role="tab" aria-controls="reportes-content" aria-selected="false">
                             <i class="fas fa-file-alt me-1"></i> Reportes
                         </button>
                     </li>
-                    <li class="nav-item" role="presentation">
+                    <li class="nav-item" role="presentation" id="auditoria-tab-item">
                         <button class="nav-link" id="auditoria-tab" data-bs-toggle="tab" data-bs-target="#auditoria-content" type="button" role="tab" aria-controls="auditoria-content" aria-selected="false">
                             <i class="fas fa-history me-1"></i> Auditoría
                         </button>
@@ -395,17 +393,18 @@
                 </ul>
                 
                 <div class="tab-content" id="adminTabContent">
-                    <!-- Tab de Solicitudes (Ya existente) -->
+                    {/* Tab de Solicitudes (Ya existente) */}
                     <div class="tab-pane fade show active" id="solicitudes-content" role="tabpanel" aria-labelledby="solicitudes-tab">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0">Gestión de Solicitudes</h5>
                             
                             <div class="d-flex gap-2">
-                                <button class="btn btn-outline-success" onclick="generarEstadisticas()">
+                                {/* MODIFICADO: IDs añadidos a botones para control de visibilidad */}
+                                <button class="btn btn-outline-success" onclick="generarEstadisticas()" id="btn-generar-estadisticas">
                                     <i class="fas fa-chart-bar me-1"></i> Estadísticas
                                 </button>
                                 
-                                <button class="btn btn-outline-info" onclick="exportarSolicitudesCSV()">
+                                <button class="btn btn-outline-info" onclick="exportarSolicitudesCSV()" id="btn-exportar-solicitudes">
                                     <i class="fas fa-file-export me-1"></i> Exportar
                                 </button>
                                 
@@ -445,19 +444,19 @@
                                         </tr>
                                     </thead>
                                     <tbody id="tabla-solicitudes-admin">
-                                        <!-- Se llenará con JavaScript -->
+                                        {/* Se llenará con JavaScript */}
                                     </tbody>
                                 </table>
                             </div>
                             <div class="card-footer p-2">
-                                <!-- Aquí se insertarán los controles de paginación -->
+                                {/* Aquí se insertarán los controles de paginación */}
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Tab de Usuarios (Ya existente) -->
+                    {/* Tab de Usuarios (Ya existente) */}
                     <div class="tab-pane fade" id="usuarios-content" role="tabpanel" aria-labelledby="usuarios-tab">
-                        <!-- Panel de gestión de usuarios (nueva funcionalidad) -->
+                        {/* Panel de gestión de usuarios (nueva funcionalidad) */}
                         <div class="card">
                             <div class="card-header">
                                 <div class="d-flex justify-content-between align-items-center">
@@ -480,7 +479,7 @@
                                         </tr>
                                     </thead>
                                     <tbody id="tabla-usuarios">
-                                        <!-- Se llenará con JavaScript -->
+                                        {/* Se llenará con JavaScript */}
                                     </tbody>
                                 </table>
                             </div>
@@ -521,7 +520,7 @@
                     </tr>
                 </thead>
                 <tbody id="tabla-repuestos">
-                    <!-- Se llenará con JavaScript -->
+                    {/* Se llenará con JavaScript */}
                 </tbody>
             </table>
         </div>
@@ -534,7 +533,7 @@
     </div>
 </div>
                     
-                    <!-- NUEVA SECCIÓN: Tab de Dashboard -->
+                    {/* NUEVA SECCIÓN: Tab de Dashboard */}
                     <div class="tab-pane fade" id="dashboard-content" role="tabpanel" aria-labelledby="dashboard-tab">
                         <div class="dashboard-header d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0"><i class="fas fa-chart-line me-2"></i>Dashboard de Estadísticas</h5>
@@ -560,19 +559,19 @@
                         </div>
                         
                         <div id="dashboard-container" class="mb-4">
-                            <!-- Tarjetas de KPIs -->
+                            {/* Tarjetas de KPIs */}
                             <div class="row mb-4" id="dashboard-cards">
-                                <!-- Se llenará con JavaScript -->
+                                {/* Se llenará con JavaScript */}
                             </div>
                             
-                            <!-- Contenedor para gráficos -->
+                            {/* Contenedor para gráficos */}
                             <div id="charts-container">
-                                <!-- Se llenará con JavaScript -->
+                                {/* Se llenará con JavaScript */}
                             </div>
                         </div>
                     </div>
                     
-                    <!-- NUEVA SECCIÓN: Tab de Reportes -->
+                    {/* NUEVA SECCIÓN: Tab de Reportes */}
                     <div class="tab-pane fade" id="reportes-content" role="tabpanel" aria-labelledby="reportes-tab">
                         <div class="row">
                             <div class="col-md-4">
@@ -595,9 +594,9 @@
                                                 </select>
                                             </div>
                                             
-                                            <!-- Opciones específicas del reporte -->
+                                            {/* Opciones específicas del reporte */}
                                             <div id="opciones-reporte" class="mb-3">
-                                                <!-- Se llenará dinámicamente según el tipo seleccionado -->
+                                                {/* Se llenará dinámicamente según el tipo seleccionado */}
                                             </div>
                                             
                                             <div class="d-grid gap-2">
@@ -617,7 +616,7 @@
                                     </div>
                                     <div class="card-body">
                                         <div id="reporte-result" class="reporte-container">
-                                            <!-- Aquí se mostrará el reporte generado -->
+                                            {/* Aquí se mostrará el reporte generado */}
                                             <div class="text-center p-5 text-muted">
                                                 <i class="fas fa-file-alt fa-3x mb-3"></i>
                                                 <p>Selecciona un tipo de reporte y configura las opciones para generar un reporte.</p>
@@ -629,7 +628,7 @@
                         </div>
                     </div>
                     
-                    <!-- NUEVA SECCIÓN: Tab de Auditoría -->
+                    {/* NUEVA SECCIÓN: Tab de Auditoría */}
                     <div class="tab-pane fade" id="auditoria-content" role="tabpanel" aria-labelledby="auditoria-tab">
                         <div class="d-flex justify-content-between align-items-center mb-4">
                             <h5 class="mb-0"><i class="fas fa-history me-2"></i>Registro de Auditoría</h5>
@@ -649,7 +648,7 @@
                             </div>
                         </div>
                         
-                        <!-- Filtros de auditoría (colapsable) -->
+                        {/* Filtros de auditoría (colapsable) */}
                         <div class="collapse mb-4" id="filtros-auditoria">
                             <div class="card card-body">
                                 <form id="form-filtros-auditoria">
@@ -666,7 +665,7 @@
                                             <label class="form-label">Usuario</label>
                                             <select class="form-select" name="usuario">
                                                 <option value="">Todos</option>
-                                                <!-- Se llenará dinámicamente -->
+                                                {/* Se llenará dinámicamente */}
                                             </select>
                                         </div>
                                         <div class="col-md-4">
@@ -705,11 +704,11 @@
                             </div>
                         </div>
                         
-                        <!-- Tabla de registros de auditoría -->
+                        {/* Tabla de registros de auditoría */}
                         <div class="card">
                             <div class="table-responsive">
                                 <div id="tabla-auditoria-container">
-                                    <!-- Aquí se cargará la tabla de auditoría -->
+                                    {/* Aquí se cargará la tabla de auditoría */}
                                     <div class="text-center p-5">
                                         <div class="spinner-border text-primary" role="status">
                                             <span class="visually-hidden">Cargando...</span>
@@ -735,8 +734,8 @@
         </div>
     </div>
 
-    <!-- Modales -->
-    <!-- Modal de detalle de solicitud -->
+    {/* Modales */}
+    {/* Modal de detalle de solicitud */}
     <div class="modal fade" id="detalle-modal" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
             <div class="modal-content">
@@ -745,7 +744,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="detalle-modal-body">
-                    <!-- Se llenará con JavaScript -->
+                    {/* Se llenará con JavaScript */}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -754,8 +753,7 @@
         </div>
     </div>
 
-    <!-- Modal para actualizar estado -->
-<!-- Modal para actualizar estado -->
+    {/* Modal para actualizar estado */}
 <div class="modal fade" id="actualizar-estado-modal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -775,14 +773,14 @@
                         </select>
                     </div>
                     
-                    <!-- Campo de fecha estimada de entrega (inicialmente oculto) -->
+                    {/* Campo de fecha estimada de entrega (inicialmente oculto) */}
                     <div class="mb-3" id="fecha-estimada-container" style="display: none;">
                         <label for="fecha-estimada" class="form-label">Fecha Estimada de Entrega</label>
                         <input type="date" class="form-control" id="fecha-estimada">
                         <small class="text-muted">Establezca la fecha estimada de entrega</small>
                     </div>
                     
-                    <!-- Campo de fecha de entrega real (inicialmente oculto y solo lectura) -->
+                    {/* Campo de fecha de entrega real (inicialmente oculto y solo lectura) */}
                     <div class="mb-3" id="fecha-entrega-container" style="display: none;">
                         <label for="fecha-entrega" class="form-label">Fecha de Entrega Real</label>
                         <input type="date" class="form-control" id="fecha-entrega" readonly>
@@ -803,7 +801,7 @@
     </div>
 </div>
     
-    <!-- Modal para gestión de usuarios (nueva funcionalidad) -->
+    {/* Modal para gestión de usuarios (nueva funcionalidad) */}
     <div class="modal fade" id="usuario-modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -838,6 +836,8 @@
                                 <option value="bodega">Bodega</option>
                                 <option value="fabricacion">Fabricación</option>
                                 <option value="admin">Administrador</option>
+                                {/* MODIFICADO: Opción para Visualizador */}
+                                <option value="visualizador">Visualizador</option>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -857,7 +857,7 @@
         </div>
     </div>
 
-    <!-- Modal para confirmar eliminación de solicitud -->
+    {/* Modal para confirmar eliminación de solicitud */}
     <div class="modal fade" id="confirmar-eliminacion-modal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -881,7 +881,7 @@
         </div>
     </div>
     
-    <!-- Modal para mostrar detalles de un log de auditoría -->
+    {/* Modal para mostrar detalles de un log de auditoría */}
     <div class="modal fade" id="detalles-log-modal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
@@ -890,7 +890,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" id="detalles-log-modal-body">
-                    <!-- Se llenará con JavaScript -->
+                    {/* Se llenará con JavaScript */}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -934,16 +934,16 @@
     </div>
 </div>
 
-    <!-- Indicador de sincronización -->
+    {/* Indicador de sincronización */}
     <div class="sync-status" id="sync-status">
         <div class="loading-spinner"></div>
         <span id="sync-message">Sincronizando datos...</span>
     </div>
 
-    <!-- Scripts de Bootstrap y otras dependencias -->
+    {/* Scripts de Bootstrap y otras dependencias */}
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     
-    <!-- Scripts de la aplicación -->
+    {/* Scripts de la aplicación */}
     <script src="js/config.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/auth.js"></script>
@@ -962,7 +962,7 @@
     <script src="js/reportes.js"></script>
     <script src="js/app.js"></script>
     
-    <!-- Script para toggle de contraseña y funciones adicionales -->
+    {/* Script para toggle de contraseña y funciones adicionales */}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Toggle para mostrar/ocultar contraseña
@@ -1120,25 +1120,32 @@
             }
             
             // Cargar registros de auditoría automáticamente al abrir la pestaña
-            document.getElementById('auditoria-tab').addEventListener('shown.bs.tab', function() {
-                window.cargarRegistrosAuditoria();
-            });
+            const auditoriaTab = document.getElementById('auditoria-tab');
+            if (auditoriaTab) {
+                auditoriaTab.addEventListener('shown.bs.tab', function() {
+                    window.cargarRegistrosAuditoria();
+                });
+            }
             
             // Cargar el dashboard automáticamente al abrir esa pestaña
-            document.getElementById('dashboard-tab').addEventListener('shown.bs.tab', function() {
-                if (typeof window.dashboard !== 'undefined' && typeof window.dashboard.cargarEstadisticas === 'function') {
-                    window.dashboard.cargarEstadisticas();
-                }
-            });
+            const dashboardTab = document.getElementById('dashboard-tab');
+            if(dashboardTab) {
+                dashboardTab.addEventListener('shown.bs.tab', function() {
+                    if (typeof window.dashboard !== 'undefined' && typeof window.dashboard.cargarEstadisticas === 'function') {
+                        window.dashboard.cargarEstadisticas();
+                    }
+                });
+            }
             
             // Función para cargar más registros de auditoría
             window.cargarMasRegistros = function() {
                 const infoEl = document.getElementById('auditoria-info');
-                const currentCount = infoEl ? parseInt(infoEl.textContent.match(/\d+/)[0]) : 100;
+                const currentCountText = infoEl ? infoEl.textContent.match(/\d+/) : null;
+                const currentCount = currentCountText ? parseInt(currentCountText[0]) : 100;
                 const newCount = currentCount + 100;
                 
                 if (typeof window.auditoria !== 'undefined' && typeof window.auditoria.cargarRegistrosAuditoria === 'function') {
-                    mostrarSincronizacion('Cargando más registros...');
+                    if (typeof mostrarSincronizacion === 'function') mostrarSincronizacion('Cargando más registros...');
                     
                     window.auditoria.cargarRegistrosAuditoria(newCount).then(logs => {
                         const container = document.getElementById('tabla-auditoria-container');
@@ -1148,16 +1155,15 @@
                             // Actualizar información
                             if (infoEl) infoEl.textContent = `Mostrando ${logs.length} registros`;
                         }
-                        ocultarSincronizacion();
+                        if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
                     }).catch(error => {
-                        mostrarAlerta(`Error al cargar más registros: ${error.message}`, 'danger');
-                        ocultarSincronizacion();
+                        if (typeof mostrarAlerta === 'function') mostrarAlerta(`Error al cargar más registros: ${error.message}`, 'danger');
+                        if (typeof ocultarSincronizacion === 'function') ocultarSincronizacion();
                     });
                 }
             };
         });
     </script>
-    <!-- Solución para la carga masiva de repuestos -->
     <script src="js/carga-masiva-solucion.js"></script>
 </body>
 </html>
