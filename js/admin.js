@@ -2,27 +2,22 @@
 // ARCHIVO UNIFICADO: ADMIN + ADMIN-PRODUCTOS + ADMIN-REPUESTOS
 // =====================================================
 
-// Elementos DOM compartidos
+// Variables globales para el módulo Admin (declaradas con let para evitar redeclaraciones si este script se carga múltiples veces en algunos entornos de desarrollo, aunque no debería)
 let tablaSolicitudesAdmin;
-
-// Variables para módulo principal de Admin (Solicitudes)
 let currentPageAdmin = 1;
-const ITEMS_PER_PAGE_ADMIN = 10; // Definir cuántos items por página para admin
+const ITEMS_PER_PAGE_ADMIN = 10;
 let filterTermAdmin = '';
-let filterStatusAdmin = 'all'; // Puede ser 'all', 'pendientes', 'fabricacion', 'entregadas'
+let filterStatusAdmin = 'all';
 
+let tablaRepuestos;
+let currentPageRepuestos = 1;
+const ITEMS_PER_PAGE_REPUESTOS = 10;
+let filterTermRepuestos = '';
 
-// Variables para módulo de Productos (si se usa por admin)
+// (Variables para Productos si se reintegran)
 // let tablaProductos;
 // let currentPageProductos = 1;
 // let filterTermProductos = '';
-
-// Variables para módulo de Repuestos (si admin los gestiona)
-let tablaRepuestos; // Se asigna en initAdminRepuestos
-let currentPageRepuestos = 1;
-const ITEMS_PER_PAGE_REPUESTOS = 10; // Definir items por página para repuestos
-let filterTermRepuestos = '';
-
 
 function setupAdminListeners() {
     // Listeners para la pestaña de Solicitudes
@@ -60,7 +55,7 @@ function setupAdminListeners() {
         });
     }
     
-    const searchInputAdminSolicitudes = document.querySelector('#admin-panel #solicitudes-content .input-group input');
+    const searchInputAdminSolicitudes = document.querySelector('#admin-panel #solicitudes-content .input-group input[type="text"]'); // Más específico
     if (searchInputAdminSolicitudes) {
         searchInputAdminSolicitudes.addEventListener('input', (e) => {
             filterTermAdmin = e.target.value.toLowerCase();
@@ -69,14 +64,12 @@ function setupAdminListeners() {
         });
     }
     
-    // Listeners para botones de acción en la tabla de solicitudes
     setupAdminButtonListeners(); 
     
-    // Listener para el botón de confirmación de eliminación (en el modal)
     const confirmarEliminacionBtn = document.getElementById('confirmar-eliminacion-btn');
     if (confirmarEliminacionBtn) {
         confirmarEliminacionBtn.addEventListener('click', () => {
-            const user = getCurrentUser(); // auth.js
+            const user = getCurrentUser(); 
             if (user && user.role === 'visualizador') {
                 mostrarAlerta('No tienes permisos para eliminar solicitudes.', 'danger');
                 const modalEl = document.getElementById('confirmar-eliminacion-modal');
@@ -86,36 +79,38 @@ function setupAdminListeners() {
                 }
                 return;
             }
-            eliminarSolicitudConfirmado(); // Llama a la función que realmente elimina
+            eliminarSolicitudConfirmado(); 
         });
     }
 
-    // Listeners para la pestaña de usuarios (si el admin la usa)
-    // El botón de "Nuevo Usuario" ya tiene un listener en el script global de index.html
-    // Aquí podríamos añadir listeners para la tabla de usuarios si es necesario para editar/eliminar
+    // Listeners para la pestaña de usuarios (delegación)
     const tablaUsuariosEl = document.getElementById('tabla-usuarios');
     if (tablaUsuariosEl) {
         tablaUsuariosEl.addEventListener('click', (e) => {
-            const user = getCurrentUser(); // auth.js
-            if (user && user.role === 'visualizador') return; // Visualizador no interactúa con esta tabla
+            const user = getCurrentUser(); 
+            if (user && user.role === 'visualizador') return; 
 
-            const editButton = e.target.closest('.btn-editar-usuario'); // Asume clase .btn-editar-usuario
-            const deleteButton = e.target.closest('.btn-eliminar-usuario'); // Asume clase .btn-eliminar-usuario
+            const editButton = e.target.closest('.btn-editar-usuario'); 
+            const deleteButton = e.target.closest('.btn-eliminar-usuario'); 
 
             if (editButton) {
                 const userId = editButton.dataset.id;
-                // Lógica para editar usuario (ej. abrir modal con datos)
-                console.log("Editar usuario:", userId);
+                console.log("Editar usuario (admin.js):", userId);
+                // Aquí iría la lógica para abrir el modal de edición de usuario
+                // if (typeof window.userManagement !== 'undefined' && typeof window.userManagement.abrirModalEditarUsuario === 'function') {
+                //     window.userManagement.abrirModalEditarUsuario(userId);
+                // }
             }
             if (deleteButton) {
                 const userId = deleteButton.dataset.id;
-                // Lógica para eliminar usuario (con confirmación)
-                console.log("Eliminar usuario:", userId);
+                console.log("Eliminar usuario (admin.js):", userId);
+                // Aquí iría la lógica para confirmar y eliminar usuario
+                // if (typeof window.userManagement !== 'undefined' && typeof window.userManagement.confirmarEliminarUsuario === 'function') {
+                //     window.userManagement.confirmarEliminarUsuario(userId);
+                // }
             }
         });
     }
-
-    // Los listeners para Repuestos se configuran en initAdminRepuestos -> setupRepuestosListeners
 }
 
 function setupAdminButtonListeners() {
@@ -123,9 +118,8 @@ function setupAdminButtonListeners() {
     if (tablaSolicitudesAdminElem) {
         tablaSolicitudesAdminElem.addEventListener('click', (e) => {
             let targetButton = null;
-            const user = getCurrentUser(); // auth.js
+            const user = getCurrentUser(); 
 
-            // Botón de Detalle (permitido para todos, incluyendo visualizador)
             if (e.target.classList.contains('btn-detalle') || e.target.closest('.btn-detalle')) {
                 targetButton = e.target.classList.contains('btn-detalle') ? e.target : e.target.closest('.btn-detalle');
                 const solicitudId = targetButton.getAttribute('data-id');
@@ -133,8 +127,7 @@ function setupAdminButtonListeners() {
                     window.showDetalleSolicitud(solicitudId);
                 }
             } 
-            // Otros botones solo si el usuario NO es visualizador
-            else if (user && user.role !== 'visualizador') {
+            else if (user && user.role !== 'visualizador') { 
                 if (e.target.classList.contains('btn-cambiar-estado') || e.target.closest('.btn-cambiar-estado')) {
                     targetButton = e.target.classList.contains('btn-cambiar-estado') ? e.target : e.target.closest('.btn-cambiar-estado');
                     const solicitudId = targetButton.getAttribute('data-id');
@@ -150,13 +143,13 @@ function setupAdminButtonListeners() {
                     }
                 }
             }
-            if (targetButton) e.stopPropagation(); // Detener propagación si un botón fue manejado
+            if (targetButton) e.stopPropagation();
         });
     }
 }
 
 function showConfirmarEliminacionModal(solicitudId, notaVenta) {
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     if (user && user.role === 'visualizador') {
         mostrarAlerta('No tienes permisos para eliminar solicitudes.', 'danger');
         return;
@@ -192,7 +185,6 @@ function showConfirmarEliminacionModal(solicitudId, notaVenta) {
     modalInstance.show();
 }
 
-// Renombrada de eliminarSolicitud para diferenciarla de la que llama el botón de confirmación
 function eliminarSolicitudConfirmado() {
     const solicitudId = document.getElementById('eliminar-solicitud-id').value;
     if (!solicitudId) {
@@ -200,8 +192,7 @@ function eliminarSolicitudConfirmado() {
         return;
     }
 
-    // Doble chequeo de rol, aunque el botón del modal ya lo hace.
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     if (user && user.role === 'visualizador') {
         mostrarAlerta('No tienes permisos para eliminar solicitudes.', 'danger');
         return;
@@ -209,20 +200,14 @@ function eliminarSolicitudConfirmado() {
 
     mostrarSincronizacion('Eliminando solicitud...');
     
-    // Asumiendo que solicitudesRef está definido globalmente o accesible (desde config.js o app.js)
-    if (typeof solicitudesRef === 'undefined' && typeof firebase !== 'undefined') {
-        // Si no está global, definirla aquí para esta operación puntual.
-        // Esto es menos ideal que tenerla consistentemente disponible.
-        const tempSolicitudesRef = firebase.database().ref('solicitudes');
-        tempSolicitudesRef.child(solicitudId).remove()
-        .then(() => handleEliminacionExitosa(solicitudId))
-        .catch(error => handleEliminacionError(error));
-    } else if (typeof solicitudesRef !== 'undefined') {
-         solicitudesRef.child(solicitudId).remove()
+    const refSolicitudes = (typeof firebase !== 'undefined' && firebase.database) ? firebase.database().ref('solicitudes') : null;
+
+    if (refSolicitudes) {
+         refSolicitudes.child(solicitudId).remove()
         .then(() => handleEliminacionExitosa(solicitudId))
         .catch(error => handleEliminacionError(error));
     } else {
-        handleEliminacionError({ message: "Referencia a Firebase no disponible." });
+        handleEliminacionError({ message: "Referencia a Firebase (solicitudesRef) no disponible." });
     }
 }
 
@@ -246,7 +231,6 @@ function handleEliminacionError(error) {
     ocultarSincronizacion();
 }
 
-
 function cargarDatosAdmin() {
     if (!tablaSolicitudesAdmin) {
         tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
@@ -258,7 +242,6 @@ function cargarDatosAdmin() {
     
     tablaSolicitudesAdmin.innerHTML = '<tr><td colspan="7" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Cargando solicitudes...</td></tr>';
     
-    // 'solicitudes' es la variable global de app.js
     if (typeof solicitudes === 'undefined' || !Array.isArray(solicitudes)) {
         tablaSolicitudesAdmin.innerHTML = `<tr><td colspan="7" class="text-center py-4">Error: No se pudieron cargar los datos de solicitudes.</td></tr>`;
         if (typeof updateAdminPagination === 'function') updateAdminPagination(0);
@@ -271,7 +254,7 @@ function cargarDatosAdmin() {
         return;
     }
 
-    let itemsFiltrados = solicitudes; // Usar la variable global 'solicitudes' de app.js
+    let itemsFiltrados = solicitudes; 
     if (filterTermAdmin) {
         itemsFiltrados = itemsFiltrados.filter(sol =>
             (sol.notaVenta && sol.notaVenta.toLowerCase().includes(filterTermAdmin)) ||
@@ -291,7 +274,7 @@ function cargarDatosAdmin() {
             if (filterStatusAdmin === 'pendientes') return sol.estado === 'Solicitud enviada por bodega';
             if (filterStatusAdmin === 'fabricacion') return sol.estado === 'En fabricación';
             if (filterStatusAdmin === 'entregadas') return sol.estado === 'Entregado';
-            return false; 
+            return true; // si filterStatusAdmin es 'all' u otro valor no manejado, no filtrar por estado
         });
     }
     
@@ -309,7 +292,7 @@ function cargarDatosAdmin() {
     
     tablaSolicitudesAdmin.innerHTML = ''; 
 
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     const userRole = user ? user.role : '';
 
     solicitudesPaginadas.forEach(solicitud => {
@@ -350,7 +333,7 @@ function updateAdminPagination(totalItems) {
             '#admin-panel #solicitudes-content .card-footer', 
             totalItems,
             currentPageAdmin,
-            window.handlePageChange, // app.js
+            window.handlePageChange, 
             'admin', 
             ITEMS_PER_PAGE_ADMIN
         );
@@ -361,9 +344,8 @@ function updateAdminPagination(totalItems) {
     }
 }
 
-
 function exportarSolicitudesCSV() {
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     if (user && user.role === 'visualizador') {
         mostrarAlerta('No tienes permisos para exportar datos.', 'danger');
         return;
@@ -375,17 +357,17 @@ function exportarSolicitudesCSV() {
     
     let csvContent = "ID Solicitud,Nota Venta,Cliente,Local,Fecha Solicitud,Estado,Observaciones,SKU,Producto,Cantidad\n";
     solicitudes.forEach(sol => {
-        const commonData = `"${sol.id}","${sol.notaVenta || ''}","${sol.cliente || ''}","${sol.local || ''}","${sol.fechaSolicitud || ''}","${sol.estado || ''}","${(sol.observaciones || '').replace(/"/g, '""')}"`;
+        const commonData = `"${sol.id || ''}","${sol.notaVenta || ''}","${sol.cliente || ''}","${sol.local || ''}","${sol.fechaSolicitud || ''}","${sol.estado || ''}","${(sol.observaciones || '').replace(/"/g, '""')}"`;
         if (sol.items && sol.items.length > 0) {
             sol.items.forEach(item => {
                 csvContent += `${commonData},"${item.sku || ''}","${item.producto || ''}","${item.cantidad || 0}"\n`;
             });
         } else {
-            csvContent += `${commonData},,,, \n`; // Sin items
+            csvContent += `${commonData},,,, \n`; 
         }
     });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' }); // Añadir BOM para Excel
     const link = document.createElement("a");
     if (link.download !== undefined) {
         const url = URL.createObjectURL(blob);
@@ -402,12 +384,11 @@ function exportarSolicitudesCSV() {
 }
 
 function generarEstadisticas() {
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     if (user && user.role === 'visualizador') {
         mostrarAlerta('No tienes permisos para generar estadísticas.', 'danger');
         return;
     }
-    // Lógica para generar estadísticas (ejemplo: contar solicitudes por estado)
     if (typeof solicitudes === 'undefined' || solicitudes.length === 0) {
         mostrarAlerta('No hay datos para generar estadísticas.', 'info');
         return;
@@ -418,48 +399,43 @@ function generarEstadisticas() {
     }, {});
 
     alert("Estadísticas de Solicitudes:\n" + JSON.stringify(stats, null, 2));
-    console.warn("generarEstadisticas es una implementación de ejemplo.");
 }
 
-// --- Funciones de Administración de Productos (si se usan por admin) ---
-// initAdminProductos, cargarTablaProductos, setupProductosListeners
-// Estas funciones necesitarían lógica similar para ocultar/deshabilitar acciones
-// si el rol 'visualizador' tuviera acceso a una pestaña de productos.
-
-// --- Funciones de Administración de Repuestos ---
 function initAdminRepuestos() {
     tablaRepuestos = document.getElementById('tabla-repuestos');
     if (!tablaRepuestos) {
-        console.warn("Elemento tabla-repuestos no encontrado. La pestaña de repuestos podría no funcionar.");
+        console.warn("Elemento tabla-repuestos no encontrado.");
     }
 
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     const esVisualizador = user && user.role === 'visualizador';
 
     const btnNuevoRepuesto = document.getElementById('btn-nuevo-repuesto');
     const btnCargaMasiva = document.getElementById('btn-carga-masiva');
 
+    // Ocultar botones si es visualizador Y la pestaña de repuestos estuviera visible para él
+    // (configureAppForRole en app.js ya oculta la pestaña completa para el visualizador en la configuración actual)
     if (esVisualizador) {
         if (btnNuevoRepuesto) btnNuevoRepuesto.style.display = 'none';
         if (btnCargaMasiva) btnCargaMasiva.style.display = 'none';
     } else {
-        if (btnNuevoRepuesto) btnNuevoRepuesto.style.display = ''; // Mostrar para admin
-        if (btnCargaMasiva) btnCargaMasiva.style.display = '';   // Mostrar para admin
+        if (btnNuevoRepuesto) btnNuevoRepuesto.style.display = ''; 
+        if (btnCargaMasiva) btnCargaMasiva.style.display = '';   
     }
 
     if (!window.repuestosModule) {
-        console.error("Módulo de repuestos (window.repuestosModule) no disponible. La administración de repuestos no funcionará completamente.");
+        console.error("Módulo de repuestos (window.repuestosModule) no disponible.");
     }
     
-    setupRepuestosListeners(); // Configura listeners de búsqueda, etc.
+    setupRepuestosListeners(); 
     
     if (typeof cargarTablaRepuestos === "function") {
-        cargarTablaRepuestos(); // Carga inicial de la tabla
+        cargarTablaRepuestos(); 
     }
 }
 
 function setupRepuestosListeners() {
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     const esVisualizador = user && user.role === 'visualizador';
 
     const btnNuevoRepuesto = document.getElementById('btn-nuevo-repuesto');
@@ -468,11 +444,11 @@ function setupRepuestosListeners() {
             btnNuevoRepuesto.style.display = 'none';
         } else {
             btnNuevoRepuesto.style.display = '';
-            // Remover listener anterior para evitar duplicados si se llama múltiples veces
-            btnNuevoRepuesto.replaceWith(btnNuevoRepuesto.cloneNode(true)); // Clonar para limpiar listeners
-            document.getElementById('btn-nuevo-repuesto').addEventListener('click', () => {
+            const newBtnNuevoRepuesto = btnNuevoRepuesto.cloneNode(true); // Clonar para limpiar listeners viejos
+            btnNuevoRepuesto.parentNode.replaceChild(newBtnNuevoRepuesto, btnNuevoRepuesto);
+            newBtnNuevoRepuesto.addEventListener('click', () => {
                 if (window.adminRepuestos && typeof window.adminRepuestos.mostrarModalRepuesto === 'function') {
-                    window.adminRepuestos.mostrarModalRepuesto(); // Sin ID para nuevo repuesto
+                    window.adminRepuestos.mostrarModalRepuesto(); 
                 }
             });
         }
@@ -484,15 +460,15 @@ function setupRepuestosListeners() {
             btnCargaMasiva.style.display = 'none';
         } else {
             btnCargaMasiva.style.display = '';
-            btnCargaMasiva.replaceWith(btnCargaMasiva.cloneNode(true));
-            document.getElementById('btn-carga-masiva').addEventListener('click', importarRepuestosCSV);
+            const newBtnCargaMasiva = btnCargaMasiva.cloneNode(true);
+            btnCargaMasiva.parentNode.replaceChild(newBtnCargaMasiva, btnCargaMasiva);
+            newBtnCargaMasiva.addEventListener('click', importarRepuestosCSV);
         }
     }
 
     const buscarRepuestoInput = document.getElementById('buscar-repuesto');
     if (buscarRepuestoInput) {
-        // Limpiar listeners anteriores si es necesario o usar una bandera
-        if (!buscarRepuestoInput.dataset.listenerAttached) {
+        if (!buscarRepuestoInput.dataset.listenerAttachedRep) { // Evitar duplicar listener
             buscarRepuestoInput.addEventListener('input', (e) => {
                 filterTermRepuestos = e.target.value.toLowerCase();
                 currentPageRepuestos = 1;
@@ -500,17 +476,16 @@ function setupRepuestosListeners() {
                     cargarTablaRepuestos();
                 }
             });
-            buscarRepuestoInput.dataset.listenerAttached = 'true';
+            buscarRepuestoInput.dataset.listenerAttachedRep = 'true';
         }
     }
 
     if (tablaRepuestos) {
-        // Delegación de eventos para botones de editar/eliminar en la tabla
-        // Limpiar listeners anteriores clonando la tabla es una opción drástica,
-        // mejor sería guardar referencia al handler y removerlo, o usar una bandera.
-        // Por simplicidad, asumimos que este setup se llama una vez o los eventos no se duplican problemáticamente.
+        // Usar un clon para limpiar listeners si setupRepuestosListeners se llama múltiples veces.
+        // O añadir un listener una sola vez.
+        // Por ahora, asumimos que el listener se añade una vez o no causa problemas.
         tablaRepuestos.addEventListener('click', (e) => {
-            if (esVisualizador) return; // Visualizador no puede hacer click en acciones
+            if (esVisualizador) return; 
 
             const target = e.target;
             const btnEditar = target.closest('.btn-editar-repuesto');
@@ -545,7 +520,7 @@ function cargarTablaRepuestos() {
     }
 
     tablaRepuestos.innerHTML = '<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm"></div> Cargando repuestos...</td></tr>';
-    const todosLosRepuestos = window.repuestosModule.getRepuestos(); // Asume que esto devuelve un array
+    const todosLosRepuestos = window.repuestosModule.getRepuestos(); 
 
     let repuestosFiltrados = todosLosRepuestos;
     if (filterTermRepuestos) {
@@ -566,12 +541,12 @@ function cargarTablaRepuestos() {
     if (repuestosPaginados.length === 0) {
         tablaRepuestos.innerHTML = `<tr><td colspan="5" class="text-center py-4">No se encontraron repuestos.</td></tr>`;
     } else {
-        const user = getCurrentUser(); // auth.js
+        const user = getCurrentUser(); 
         const userRole = user ? user.role : '';
 
         repuestosPaginados.forEach(repuesto => {
             const tr = document.createElement('tr');
-            let accionesRepuestoHTML = '<span class="text-muted small">Sin acciones</span>'; // Default para visualizador o si no hay acciones
+            let accionesRepuestoHTML = '<span class="text-muted small">Sin acciones</span>'; 
             if (userRole === 'admin') { 
                 accionesRepuestoHTML = `
                     <div class="btn-group" role="group">
@@ -592,15 +567,14 @@ function cargarTablaRepuestos() {
     }
 }
 
-// Wrapper para paginación de repuestos
 function updateRepuestosPagination(totalItems) {
     if (typeof createPaginationControls === 'function') {
         createPaginationControls(
             '#repuestos-content .card-footer #repuestos-pagination', 
             totalItems,
             currentPageRepuestos,
-            window.handlePageChange, // app.js
-            'admin_repuestos', // panelName específico para repuestos
+            window.handlePageChange, 
+            'admin_repuestos', 
             ITEMS_PER_PAGE_REPUESTOS
         );
     }
@@ -616,109 +590,145 @@ function updateRepuestosPagination(totalItems) {
     }
 }
 
-
-// --- Funciones de Carga Masiva de Repuestos ---
 function importarRepuestosCSV() {
-    const user = getCurrentUser(); // auth.js
+    const user = getCurrentUser(); 
     if (user && user.role === 'visualizador') {
         mostrarAlerta('No tienes permisos para importar repuestos.', 'danger');
         return;
     }
-    if (typeof mostrarModalImportarRepuestos === 'function') {
+    if (typeof mostrarModalImportarRepuestos === 'function') { // Asumiendo que esta función existe
         mostrarModalImportarRepuestos();
     } else {
         console.error("mostrarModalImportarRepuestos no está definida.");
+        mostrarAlerta("Función de importación no disponible.", "warning");
     }
 }
-// Las funciones mostrarModalImportarRepuestos, configurarEventosImportacion, mostrarVistaPrevia, procesarImportacionCSV
-// no necesitan chequeo de rol directo si la entrada (importarRepuestosCSV) ya está protegida.
 
-// (Asegúrate que las funciones de carga masiva como `mostrarModalImportarRepuestos` estén definidas,
-//  ya sea en este archivo o importadas correctamente si están en `carga-masiva-repuestos.js` o similar)
-
-
-// --- Inicialización y Exportación ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Asignar elemento tablaSolicitudesAdmin una vez que el DOM está listo
-    tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin');
+    tablaSolicitudesAdmin = document.getElementById('tabla-solicitudes-admin'); // Asignar aquí
     
-    // Configurar listeners generales para el panel de admin (siempre que el panel exista)
     if (document.getElementById('admin-panel')) {
       setupAdminListeners(); 
     }
     
-    // Inicializar otras pestañas del admin si existen y son relevantes
-    // La visibilidad para el rol 'visualizador' es controlada por configureAppForRole en app.js
-    if (document.getElementById('repuestos-content')) {
-        // No llamar a initAdminRepuestos aquí directamente si la pestaña puede estar oculta.
-        // Se llamará cuando la pestaña se active (ver listener de 'shown.bs.tab')
-        // o si 'admin-panel' es el panel por defecto para el admin y repuestos es la pestaña activa.
-    }
-    // Similar para usuarios, dashboard, etc.
-
-    // Listener para cambio de pestañas en el panel de admin
+    // Inicialización de Pestañas del Admin (ej. Repuestos) se maneja con el evento 'shown.bs.tab'
     const adminTabs = document.querySelectorAll('#adminTabs .nav-link');
     adminTabs.forEach(tab => {
         tab.addEventListener('shown.bs.tab', function (event) {
             const targetTabId = event.target.getAttribute('data-bs-target');
-            const user = getCurrentUser(); // auth.js
+            const user = getCurrentUser(); 
 
-            // Si el rol es visualizador, no debería poder cambiar a tabs no permitidas,
-            // ya que estarían ocultas por configureAppForRole.
-            // Este código es más para roles con acceso completo.
             if (user && user.role === 'visualizador' && targetTabId !== '#solicitudes-content') {
-                // Esta situación no debería ocurrir si configureAppForRole funciona bien.
-                console.warn("Visualizador intentó cambiar a una pestaña no permitida:", targetTabId);
-                // Si es necesario, forzar de vuelta a la pestaña de solicitudes:
-                // const solicitudesTabBtn = document.getElementById('solicitudes-tab');
-                // if (solicitudesTabBtn) bootstrap.Tab.getOrCreateInstance(solicitudesTabBtn).show();
+                console.warn("Visualizador intentó cambiar a una pestaña no permitida (ya debería estar oculta):", targetTabId);
                 return; 
             }
 
-            // Cargar datos o inicializar la pestaña activa
             if (targetTabId === '#solicitudes-content' && typeof cargarDatosAdmin === 'function') {
                 cargarDatosAdmin(); 
             } else if (targetTabId === '#repuestos-content') {
-                // La pestaña de repuestos está oculta para 'visualizador' por configureAppForRole.
-                // Si se decide mostrarla en modo lectura, aquí se llamaría initAdminRepuestos()
-                // y cargarTablaRepuestos() se aseguraría de no mostrar botones de acción.
-                if ((!user || user.role !== 'visualizador') && typeof initAdminRepuestos === 'function') {
-                     initAdminRepuestos(); 
+                // Solo inicializar si la pestaña es visible (controlado por configureAppForRole)
+                // y el rol no es visualizador (o si visualizador tuviera permiso de ver repuestos)
+                const repuestosTabItem = document.getElementById('repuestos-tab-item');
+                if (repuestosTabItem && repuestosTabItem.style.display !== 'none') {
+                    if (typeof initAdminRepuestos === 'function') initAdminRepuestos(); 
                 }
-            } else if (targetTabId === '#usuarios-content' && typeof cargarTablaUsuarios === 'function') {
-                 if ((!user || user.role !== 'visualizador')) { // Asumiendo que cargarTablaUsuarios es para admin
-                    // cargarTablaUsuarios(); // Debes tener esta función definida para la pestaña de usuarios
+            } else if (targetTabId === '#usuarios-content') {
+                const usuariosTabItem = document.getElementById('usuarios-tab-item');
+                 if (usuariosTabItem && usuariosTabItem.style.display !== 'none') {
+                    // if (typeof cargarTablaUsuarios === 'function') cargarTablaUsuarios(); 
+                    console.log("Pestaña Usuarios activada. Implementar carga de datos si es necesario.");
                  }
             }
-            // Añadir lógica similar para dashboard-content, reportes-content, auditoria-content
-            // siempre verificando el rol si es necesario.
+            // Implementar lógica para otras pestañas: dashboard, reportes, auditoria
+            // asegurándose de que se inicialicen solo si son visibles para el rol actual.
         });
     });
+
+    // Configuración del formulario de repuestos (asegurarse que se hace una vez)
+    const formRepuesto = document.getElementById('repuesto-form');
+    if (formRepuesto && !formRepuesto.dataset.listenerAttached) { // Evitar duplicar listener
+        formRepuesto.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const user = getCurrentUser(); 
+            if (user && user.role === 'visualizador') {
+                mostrarAlerta("Acción no permitida.", "danger");
+                const modalEl = document.getElementById('repuesto-modal');
+                if (modalEl) {
+                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInstance) modalInstance.hide();
+                }
+                return;
+            }
+            
+            const repuestoId = document.getElementById('repuesto-id').value;
+            const sku = document.getElementById('repuesto-sku').value.trim();
+            const nombre = document.getElementById('repuesto-nombre').value.trim();
+            const categoria = document.getElementById('repuesto-categoria').value.trim();
+            const stock = parseInt(document.getElementById('repuesto-stock').value) || 0;
+
+            if (!sku || !nombre) {
+                mostrarAlerta('SKU y Nombre son requeridos.', 'warning');
+                return;
+            }
+
+            const repuestoData = { sku, nombre, categoria, stock };
+            let operationSuccess = false;
+
+            try {
+                if (!window.repuestosModule) throw new Error("Módulo de repuestos no disponible.");
+
+                if (repuestoId) { 
+                    repuestoData.id = repuestoId;
+                    if (typeof window.repuestosModule.actualizarRepuesto !== 'function') throw new Error("actualizarRepuesto no disponible");
+                    await window.repuestosModule.actualizarRepuesto(repuestoData);
+                    mostrarAlerta('Repuesto actualizado con éxito.', 'success');
+                    operationSuccess = true;
+                } else { 
+                    if (typeof window.repuestosModule.buscarRepuestoPorSku !== 'function') throw new Error("buscarRepuestoPorSku no disponible");
+                    if (window.repuestosModule.buscarRepuestoPorSku(sku)) {
+                        mostrarAlerta('El SKU ya existe. No se puede crear el repuesto.', 'danger');
+                        return; 
+                    }
+                    if (typeof window.repuestosModule.agregarRepuesto !== 'function') throw new Error("agregarRepuesto no disponible");
+                    await window.repuestosModule.agregarRepuesto(repuestoData);
+                    mostrarAlerta('Repuesto agregado con éxito.', 'success');
+                    operationSuccess = true;
+                }
+
+                if (operationSuccess) {
+                    if (typeof cargarTablaRepuestos === 'function') cargarTablaRepuestos();
+                    const modalEl = document.getElementById('repuesto-modal');
+                    if (modalEl) {
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                        if (modalInstance) modalInstance.hide();
+                    }
+                }
+            } catch (error) {
+                console.error("Error guardando repuesto:", error);
+                mostrarAlerta(`Error guardando repuesto: ${error.message}`, 'danger');
+            }
+        });
+        formRepuesto.dataset.listenerAttached = 'true';
+    }
 });
 
-// Exponer funciones al ámbito global para ser llamadas desde HTML (onclick) o otros scripts
+// Exponer funciones/objetos al ámbito global
 window.showConfirmarEliminacionModal = showConfirmarEliminacionModal;
-// La función eliminarSolicitudConfirmado es interna, llamada por el listener del botón del modal.
-window.cargarDatosAdmin = cargarDatosAdmin; // Para actualizar la tabla desde otros lugares si es necesario
+window.cargarDatosAdmin = cargarDatosAdmin; 
 window.exportarSolicitudesCSV = exportarSolicitudesCSV;
 window.generarEstadisticas = generarEstadisticas;
 
-// Objeto global para adminRepuestos
 window.adminRepuestos = {
     initAdminRepuestos,
     cargarTablaRepuestos,
     mostrarModalRepuesto: function(repuestoId) {
-        const user = getCurrentUser(); // auth.js
+        const user = getCurrentUser(); 
         if (user && user.role === 'visualizador') {
             mostrarAlerta("Acción no permitida.", "danger"); return;
         }
         
-        console.log(`Solicitado modal para repuesto ID: ${repuestoId || '(Nuevo repuesto)'}`);
         const modalEl = document.getElementById('repuesto-modal');
-        if (!modalEl) {
-            console.error("Modal 'repuesto-modal' no encontrado.");
-            return;
-        }
+        if (!modalEl) { console.error("Modal 'repuesto-modal' no encontrado."); return; }
 
         const modalTitle = modalEl.querySelector('.modal-title');
         const form = document.getElementById('repuesto-form');
@@ -730,7 +740,7 @@ window.adminRepuestos = {
 
         if(form) form.reset();
         if(repuestoIdEl) repuestoIdEl.value = '';
-        if(repuestoSkuEl) repuestoSkuEl.readOnly = false; // Por defecto editable para nuevo
+        if(repuestoSkuEl) repuestoSkuEl.readOnly = false;
 
         if (repuestoId && window.repuestosModule && typeof window.repuestosModule.getRepuestoById === 'function') {
             const repuesto = window.repuestosModule.getRepuestoById(repuestoId);
@@ -741,28 +751,28 @@ window.adminRepuestos = {
                 if(repuestoNombreEl) repuestoNombreEl.value = repuesto.nombre;
                 if(repuestoCategoriaEl) repuestoCategoriaEl.value = repuesto.categoria;
                 if(repuestoStockEl) repuestoStockEl.value = repuesto.stock;
-                if(repuestoSkuEl) repuestoSkuEl.readOnly = true; // SKU no editable al editar
-            } else { // ID provisto pero repuesto no encontrado
+                if(repuestoSkuEl) repuestoSkuEl.readOnly = true; 
+            } else { 
                 if(modalTitle) modalTitle.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Nuevo Repuesto (ID no encontrado)';
             }
-        } else { // Nuevo repuesto
+        } else { 
             if(modalTitle) modalTitle.innerHTML = '<i class="fas fa-plus-circle me-2"></i>Nuevo Repuesto';
         }
 
         let modalInstance = bootstrap.Modal.getInstance(modalEl);
-        if (modalInstance) modalInstance.dispose(); // Desechar instancia vieja para evitar problemas
+        if (modalInstance) modalInstance.dispose(); 
         modalInstance = new bootstrap.Modal(modalEl);
         modalInstance.show();
     },
     eliminarRepuesto: function(repuestoId) {
-        const user = getCurrentUser(); // auth.js
+        const user = getCurrentUser(); 
         if (user && user.role === 'visualizador') {
             mostrarAlerta("Acción no permitida.", "danger"); return;
         }
         
         if (confirm(`¿Estás seguro de que deseas eliminar el repuesto ID: ${repuestoId}?`)) {
             if (window.repuestosModule && typeof window.repuestosModule.eliminarRepuesto === 'function') {
-                window.repuestosModule.eliminarRepuesto(repuestoId) // Asume que esto es una Promise
+                window.repuestosModule.eliminarRepuesto(repuestoId) 
                     .then(() => {
                         if(typeof mostrarAlerta === 'function') mostrarAlerta('Repuesto eliminado con éxito.', 'success');
                         if (typeof cargarTablaRepuestos === 'function') cargarTablaRepuestos();
@@ -776,80 +786,5 @@ window.adminRepuestos = {
             }
         }
     },
-    importarRepuestosCSV // Ya definida y protegida por rol más arriba
+    importarRepuestosCSV 
 };
-
-// Listener para el formulario de repuestos (el submit)
-// Debe estar después de la definición de window.adminRepuestos
-const repuestoForm = document.getElementById('repuesto-form');
-if (repuestoForm) {
-    // Asegurar que no se añadan múltiples listeners si este script se carga o ejecuta varias veces.
-    // Una forma es clonar el nodo y reemplazarlo, o usar una bandera.
-    const newRepuestoForm = repuestoForm.cloneNode(true);
-    repuestoForm.parentNode.replaceChild(newRepuestoForm, repuestoForm);
-
-    newRepuestoForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const user = getCurrentUser(); // auth.js
-        if (user && user.role === 'visualizador') {
-            mostrarAlerta("Acción no permitida.", "danger");
-            const modalEl = document.getElementById('repuesto-modal');
-            if (modalEl) {
-                const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                if (modalInstance) modalInstance.hide();
-            }
-            return;
-        }
-        
-        const repuestoId = document.getElementById('repuesto-id').value;
-        const sku = document.getElementById('repuesto-sku').value.trim();
-        const nombre = document.getElementById('repuesto-nombre').value.trim();
-        const categoria = document.getElementById('repuesto-categoria').value.trim();
-        const stock = parseInt(document.getElementById('repuesto-stock').value) || 0;
-
-        if (!sku || !nombre) {
-            mostrarAlerta('SKU y Nombre son requeridos.', 'warning');
-            return;
-        }
-
-        const repuestoData = { sku, nombre, categoria, stock };
-        let operationSuccess = false;
-
-        try {
-            if (!window.repuestosModule) throw new Error("Módulo de repuestos no disponible.");
-
-            if (repuestoId) { // Actualizar
-                repuestoData.id = repuestoId;
-                if (typeof window.repuestosModule.actualizarRepuesto !== 'function') throw new Error("actualizarRepuesto no disponible");
-                await window.repuestosModule.actualizarRepuesto(repuestoData);
-                mostrarAlerta('Repuesto actualizado con éxito.', 'success');
-                operationSuccess = true;
-            } else { // Crear
-                if (typeof window.repuestosModule.buscarRepuestoPorSku !== 'function') throw new Error("buscarRepuestoPorSku no disponible");
-                if (window.repuestosModule.buscarRepuestoPorSku(sku)) {
-                    mostrarAlerta('El SKU ya existe. No se puede crear el repuesto.', 'danger');
-                    return; // No cerrar modal, permitir corrección
-                }
-                if (typeof window.repuestosModule.agregarRepuesto !== 'function') throw new Error("agregarRepuesto no disponible");
-                // ID se genera dentro de agregarRepuesto en el módulo repuestos.js si es necesario
-                await window.repuestosModule.agregarRepuesto(repuestoData);
-                mostrarAlerta('Repuesto agregado con éxito.', 'success');
-                operationSuccess = true;
-            }
-
-            if (operationSuccess) {
-                if (typeof cargarTablaRepuestos === 'function') cargarTablaRepuestos();
-                const modalEl = document.getElementById('repuesto-modal');
-                if (modalEl) {
-                    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-                    if (modalInstance) modalInstance.hide();
-                }
-            }
-        } catch (error) {
-            console.error("Error guardando repuesto:", error);
-            mostrarAlerta(`Error guardando repuesto: ${error.message}`, 'danger');
-        }
-    });
-}
-
-// (Estilos CSS para carga masiva y otras funciones auxiliares se asume que están en sus respectivos lugares o utils.js)
