@@ -1,7 +1,3 @@
-<!-- Solución completa para el problema de carga masiva de repuestos -->
-<!-- Guardar estos scripts en archivo carga-masiva-solucion.js y agregarlo al final de index.html -->
-
-<script>
 // Parte 1: Función simplificada para mostrar la interfaz de importación
 function mostrarInterfazImportacionSimplificada() {
     console.log("Ejecutando mostrarInterfazImportacionSimplificada...");
@@ -37,18 +33,15 @@ function mostrarInterfazImportacionSimplificada() {
                                     <h4>Seleccionar archivo</h4>
                                     <form id="form-importar-repuestos">
                                         <div class="form-group">
-                                            <input type="file" id="archivo-csv" accept=".csv" class="form-control" required>
-                                        </div>
+                                            <input type="file" id="archivo-csv-carga-masiva" accept=".csv" class="form-control" required> </div>
                                         <div class="form-group mt-3">
-                                            <button type="submit" id="btn-importar" class="btn btn-primary">
-                                                <i class="fas fa-file-import me-1"></i> Importar repuestos
+                                            <button type="submit" id="btn-importar-carga-masiva" class="btn btn-primary"> <i class="fas fa-file-import me-1"></i> Importar repuestos
                                             </button>
                                         </div>
                                     </form>
                                 </div>
                                 
-                                <div id="resultado-importacion" class="mt-4"></div>
-                            </div>
+                                <div id="resultado-importacion-carga-masiva" class="mt-4"></div> </div>
                         </div>
                     </div>
                 </div>
@@ -111,7 +104,7 @@ function mostrarInterfazImportacionSimplificada() {
                     e.preventDefault();
                     console.log("Formulario de importación enviado");
                     
-                    const archivoInput = document.getElementById('archivo-csv');
+                    const archivoInput = document.getElementById('archivo-csv-carga-masiva'); // Usar ID cambiado
                     const archivo = archivoInput.files[0];
                     
                     if (!archivo) {
@@ -120,14 +113,14 @@ function mostrarInterfazImportacionSimplificada() {
                     }
                     
                     // Mostrar indicador de carga
-                    const btnImportar = document.getElementById('btn-importar');
+                    const btnImportar = document.getElementById('btn-importar-carga-masiva'); // Usar ID cambiado
                     if (btnImportar) {
                         btnImportar.disabled = true;
                         btnImportar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Procesando...';
                     }
                     
                     try {
-                        const resultadoImportacion = document.getElementById('resultado-importacion');
+                        const resultadoImportacion = document.getElementById('resultado-importacion-carga-masiva'); // Usar ID cambiado
                         
                         // Verificar si está disponible la función original
                         if (window.cargaMasivaRepuestosModule && typeof window.cargaMasivaRepuestosModule.importarRepuestosDesdeCSV === 'function') {
@@ -149,6 +142,22 @@ function mostrarInterfazImportacionSimplificada() {
                             
                             // Notificar que se han actualizado los repuestos
                             document.dispatchEvent(new CustomEvent('repuestosActualizados'));
+                        } else if (typeof window.importarRepuestosDesdeCSVSimplificado === 'function') {
+                            console.warn("Módulo original de carga masiva no encontrado, usando importación simplificada...");
+                            const resultados = await window.importarRepuestosDesdeCSVSimplificado(archivo);
+                             if (resultadoImportacion) {
+                                resultadoImportacion.innerHTML = `
+                                    <div class="alert alert-info">
+                                        <p><strong>Importación (simplificada) completada</strong></p>
+                                        <p>Total de líneas: ${resultados.total}</p>
+                                        <p>Procesados: ${resultados.procesados}</p>
+                                        <p>Exitosos: ${resultados.exitosos}</p>
+                                        <p>Fallidos: ${resultados.fallidos}</p>
+                                        ${resultados.errores.length > 0 ? '<p>Errores:<ul>' + resultados.errores.map(err => `<li>Línea ${err.linea}: ${err.mensaje}</li>`).join('') + '</ul></p>' : '' }
+                                    </div>
+                                `;
+                            }
+                            document.dispatchEvent(new CustomEvent('repuestosActualizados'));
                         } else {
                             if (resultadoImportacion) {
                                 resultadoImportacion.innerHTML = `
@@ -162,7 +171,7 @@ function mostrarInterfazImportacionSimplificada() {
                     } catch (error) {
                         console.error("Error en la importación:", error);
                         
-                        const resultadoImportacion = document.getElementById('resultado-importacion');
+                        const resultadoImportacion = document.getElementById('resultado-importacion-carga-masiva'); // Usar ID cambiado
                         if (resultadoImportacion) {
                             resultadoImportacion.innerHTML = `
                                 <div class="alert alert-danger">
@@ -173,7 +182,7 @@ function mostrarInterfazImportacionSimplificada() {
                         }
                     } finally {
                         // Restaurar el botón
-                        const btnImportar = document.getElementById('btn-importar');
+                        const btnImportar = document.getElementById('btn-importar-carga-masiva'); // Usar ID cambiado
                         if (btnImportar) {
                             btnImportar.disabled = false;
                             btnImportar.innerHTML = '<i class="fas fa-file-import me-1"></i> Importar repuestos';
@@ -208,7 +217,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Eliminar posibles eventos existentes para evitar duplicaciones
             const nuevoBtn = btnCargaMasiva.cloneNode(true);
-            btnCargaMasiva.parentNode.replaceChild(nuevoBtn, btnCargaMasiva);
+            if (btnCargaMasiva.parentNode) {
+                btnCargaMasiva.parentNode.replaceChild(nuevoBtn, btnCargaMasiva);
+            }
             
             // Registrar el nuevo evento
             nuevoBtn.addEventListener('click', function(event) {
@@ -293,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 alert("No se pudo mostrar la interfaz de importación. Error: " + error.message);
             }
         }
-    }, 1000);
+    }, 1000); // Aumentado el tiempo de espera por si acaso
 });
 
 // Parte 3: Funcionalidad de importación de respaldo (si el módulo original no está disponible)
@@ -317,23 +328,28 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
         reader.onload = async (e) => {
             try {
                 const contenido = e.target.result;
-                const lineas = contenido.split('\n');
+                const lineas = contenido.split(/\r\n|\n/); // Mejor manejo de saltos de línea
+                
+                if (lineas.length === 0) {
+                    reject(new Error('El archivo CSV está vacío.'));
+                    return;
+                }
                 
                 // Extraer encabezados (primera línea)
-                const encabezados = lineas[0].split(',').map(h => h.trim());
+                const encabezados = lineas[0].split(',').map(h => h.trim().toLowerCase()); // Convertir a minúsculas para comparación robusta
                 
                 // Verificar que al menos contenga sku y nombre
-                const skuIndex = encabezados.findIndex(h => h.toLowerCase() === 'sku');
-                const nombreIndex = encabezados.findIndex(h => h.toLowerCase() === 'nombre');
+                const skuIndex = encabezados.indexOf('sku');
+                const nombreIndex = encabezados.indexOf('nombre');
                 
                 if (skuIndex === -1 || nombreIndex === -1) {
-                    reject(new Error('El CSV debe contener al menos las columnas "sku" y "nombre"'));
+                    reject(new Error('El CSV debe contener al menos las columnas "sku" y "nombre" en los encabezados.'));
                     return;
                 }
                 
                 // Resultado a devolver
                 const resultados = {
-                    total: lineas.length - 1,
+                    total: lineas.length -1, // Total de líneas de datos
                     procesados: 0,
                     exitosos: 0,
                     fallidos: 0,
@@ -341,8 +357,8 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
                 };
                 
                 // Obtener índices de columnas opcionales
-                const categoriaIndex = encabezados.findIndex(h => h.toLowerCase() === 'categoria');
-                const stockIndex = encabezados.findIndex(h => h.toLowerCase() === 'stock');
+                const categoriaIndex = encabezados.indexOf('categoria');
+                const stockIndex = encabezados.indexOf('stock');
                 
                 // Verificar si tenemos acceso al módulo de repuestos
                 const repuestosModuleDisponible = window.repuestosModule && 
@@ -351,7 +367,7 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
                     typeof window.repuestosModule.agregarRepuesto === 'function';
                 
                 if (!repuestosModuleDisponible) {
-                    reject(new Error('No se puede acceder al módulo de repuestos para procesar el archivo'));
+                    reject(new Error('No se puede acceder al módulo de repuestos para procesar el archivo. Asegúrate que repuestos.js esté cargado y funcional.'));
                     return;
                 }
                 
@@ -371,15 +387,20 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
                         
                         // Valores opcionales
                         const categoria = categoriaIndex !== -1 ? valores[categoriaIndex] : 'Sin categoría';
-                        const stock = stockIndex !== -1 ? parseInt(valores[stockIndex], 10) || 0 : 0;
+                        const stock = stockIndex !== -1 ? parseInt(valores[stockIndex], 10) : 0; // Default a 0 si no es número
                         
+                        if (isNaN(stock)) { // Si parseInt falla, es NaN
+                             console.warn(`Línea ${i+1}: Stock inválido '${valores[stockIndex]}', se usará 0.`);
+                             stock = 0;
+                        }
+
                         // Validar datos mínimos requeridos
                         if (!sku || !nombre) {
-                            throw new Error(`Línea ${i}: SKU y nombre son obligatorios`);
+                            throw new Error(`Línea ${i+1}: SKU y nombre son obligatorios`);
                         }
                         
                         // Preparar objeto de repuesto
-                        const repuesto = {
+                        const repuestoData = {
                             sku: sku,
                             nombre: nombre,
                             categoria: categoria,
@@ -391,19 +412,19 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
                         
                         if (repuestoExistente) {
                             // Actualizar repuesto existente
-                            repuesto.id = repuestoExistente.id;
-                            await window.repuestosModule.actualizarRepuesto(repuesto);
+                            repuestoData.id = repuestoExistente.id;
+                            await window.repuestosModule.actualizarRepuesto(repuestoData);
                         } else {
                             // Agregar nuevo repuesto
-                            repuesto.id = 'R' + Date.now().toString(36) + Math.random().toString(36).substr(2, 5);
-                            await window.repuestosModule.agregarRepuesto(repuesto);
+                            // ID se genera dentro de agregarRepuesto en el módulo principal repuestos.js
+                            await window.repuestosModule.agregarRepuesto(repuestoData);
                         }
                         
                         resultados.exitosos++;
                     } catch (error) {
                         resultados.fallidos++;
                         resultados.errores.push({
-                            linea: i,
+                            linea: i + 1, // Línea real en el archivo
                             mensaje: error.message
                         });
                     }
@@ -419,7 +440,6 @@ window.importarRepuestosDesdeCSVSimplificado = async function(archivo) {
             reject(new Error('Error al leer el archivo'));
         };
         
-        reader.readAsText(archivo);
+        reader.readAsText(archivo, 'UTF-8'); // Especificar UTF-8 puede ayudar con caracteres especiales
     });
 };
-</script>
