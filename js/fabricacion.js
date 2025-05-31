@@ -410,7 +410,7 @@ function cargarDatosFabricacion() {
                             <i class="fas fa-edit me-1"></i>Estado
                         </button>
                     ` : ''}
-                    ${botonPDFHTML} {/* Se inserta el botón PDF aquí */}
+                    ${botonPDFHTML}
                 </div>
             </td>
         `;
