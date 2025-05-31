@@ -1,0 +1,204 @@
+/* Estilos para Dashboards - css/estilos-dashboards.css */
+
+/* Estilo general para el contenedor del dashboard */
+#dashboard-content {
+    padding: 15px;
+    background-color: #f4f7f6; /* Un fondo suave para el área del dashboard */
+}
+
+.dashboard-header {
+    margin-bottom: 1.5rem;
+}
+
+/* Estilos para las tarjetas de KPIs (Key Performance Indicators) */
+#dashboard-cards .card {
+    border: none;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+    background-color: #ffffff;
+    height: 100%; /* Asegurar que todas las tarjetas en una fila tengan la misma altura */
+}
+
+#dashboard-cards .card:hover {
+    transform: translateY(-5px);
+}
+
+#dashboard-cards .card-body {
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+#dashboard-cards .kpi-value {
+    font-size: 2rem; /* Tamaño grande para el valor del KPI */
+    font-weight: 700; /* Montserrat Bold */
+    color: #343a40; /* Color oscuro principal */
+    margin-bottom: 0.5rem;
+    line-height: 1.2;
+}
+
+#dashboard-cards .kpi-label {
+    font-size: 0.9rem;
+    color: #6c757d; /* Color secundario para la etiqueta */
+    margin-bottom: 0;
+    font-family: 'Roboto', sans-serif;
+}
+
+#dashboard-cards .kpi-icon {
+    font-size: 2.5rem; /* Tamaño del icono */
+    color: #0d6efd; /* Color primario de Bootstrap, puedes cambiarlo */
+    opacity: 0.7;
+    margin-bottom: 1rem; /* Espacio debajo del icono */
+    align-self: flex-start; /* Alinear icono a la izquierda */
+}
+
+/* Estilos para los contenedores de gráficos */
+#charts-container .chart-card {
+    background-color: #ffffff;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#charts-container .chart-card h5 {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.grafico-container {
+    position: relative;
+    height: 350px; /* Altura por defecto para los gráficos, ajústala según necesites */
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+/* Estilos para la sección de Reportes */
+#reportes-content .card {
+    margin-bottom: 1.5rem;
+}
+
+#reportes-content .reporte-container {
+    min-height: 300px; /* Para que el área de resultado del reporte tenga un tamaño mínimo */
+    padding: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 0.25rem;
+    background-color: #fff;
+}
+
+#reportes-content .reporte-titulo {
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 600;
+}
+
+#reportes-content .reporte-acciones {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 1rem;
+}
+
+/* Estilos para las tarjetas de métricas en el reporte de rendimiento mensual */
+.metric-card {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem; /* Bootstrap's default: .25rem */
+    padding: 1rem;
+    text-align: center;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.metric-card .metric-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #212529;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.metric-card .metric-label {
+    font-size: 0.85rem;
+    color: #495057;
+    display: block;
+}
+
+
+/* Estilos para la impresión de reportes */
+@media print {
+    body {
+        background-color: #fff !important; /* Fondo blanco para impresión */
+        font-size: 10pt; /* Tamaño de fuente base para impresión */
+    }
+
+    .navbar, .sidebar, .reporte-acciones, #reporte-form, .btn, .no-print {
+        display: none !important; /* Ocultar elementos no deseados */
+    }
+
+    .content-wrapper, .container, #admin-panel, #reportes-content, .tab-content, .tab-pane {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #ccc !important; /* Borde sutil para las tarjetas */
+        page-break-inside: avoid; /* Evitar que las tarjetas se corten entre páginas */
+    }
+
+    .table-responsive {
+        overflow-x: visible !important; /* Mostrar toda la tabla */
+    }
+
+    .table {
+        font-size: 9pt; /* Reducir tamaño de fuente en tablas */
+    }
+    .table th, .table td {
+        padding: 4px !important; /* Reducir padding en celdas */
+    }
+
+    .grafico-container {
+        height: auto !important; /* Permitir que el gráfico ajuste su altura */
+        page-break-inside: avoid;
+    }
+    .grafico-container canvas {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+
+    .reporte-titulo {
+        text-align: center;
+        font-size: 14pt;
+    }
+    .reporte-titulo small {
+        font-size: 10pt;
+    }
+    h5.card-title {
+        font-size: 12pt;
+    }
+}
+```
+
+**Cómo usarlo:**
+
+1.  Crea una carpeta llamada `css` en la raíz de tu proyecto (si aún no existe).
+2.  Dentro de la carpeta `css`, crea un nuevo archivo llamado `estilos-dashboards.css`.
+3.  Copia y pega el código CSS de arriba en este nuevo archivo.
+4.  Guarda el archivo.
+5.  Asegúrate de que en tu `index.html` tengas la línea correcta para enlazar este archivo CSS dentro de la etiqueta `<head>`:
+    ```html
+    <link rel="stylesheet" href="css/estilos-dashboards.css">
+    ```
+    (Ya la tienes, así que solo necesitas crear el archivo y pegar el contenido).
+
+Estos estilos son un punto de partida. Puedes personalizarlos y expandirlos según tus necesidades para que el dashboard se vea exactamente como quieres. He incluido algunos estilos básicos para las tarjetas de KPI, los contenedores de gráficos y la sección de reportes, además de algunos estilos para mejorar la vista de impresión.
+
+Una vez que hayas creado y guardado este archivo, el error 404 para `estilos-dashboards.css` debería desaparecer. Luego, podemos enfocarnos en el error de sintaxis en `reportes.j
