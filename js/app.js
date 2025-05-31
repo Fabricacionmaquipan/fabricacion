@@ -266,7 +266,22 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                     // La limpieza del backdrop y body la maneja el evento 'hidden.bs.modal' en modals.js
                     mostrarAlerta('Estado actualizado correctamente.', 'success');
                     ocultarSincronizacion();
-                    // updateCurrentView(); // Actualizar la tabla
+                    // updateCurrentView(); // Se actualiza automáticamente por el listener de Firebase
+
+                    // --- INICIO DE LA MODIFICACIÓN ---
+                    // Generar PDF si el nuevo estado es "En fabricación"
+                    if (nuevoEstado === 'En fabricación') {
+                        if (typeof generarPDFEntrega === 'function') {
+                            generarPDFEntrega(solicitudId);
+                        } else if (typeof window.generarPDFEntrega === 'function') { 
+                            // Si la expusiste explícitamente en window en fabricacion.js
+                            window.generarPDFEntrega(solicitudId);
+                        } else {
+                            console.warn('La función generarPDFEntrega no está disponible globalmente.');
+                            mostrarAlerta('Estado actualizado, pero no se pudo generar el PDF automáticamente.', 'warning');
+                        }
+                    }
+                    // --- FIN DE LA MODIFICACIÓN ---
                 })
                 .catch(error => {
                     console.error('Error al actualizar el estado en Firebase:', error);
