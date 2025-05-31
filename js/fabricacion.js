@@ -444,12 +444,14 @@ function actualizarEncabezadoTablaFabricacion() {
 
 // Generar PDF de entrega
 function generarPDFEntrega(solicitudId) {
-    console.log("Generando PDF para solicitud:", solicitudId);
-    
+    console.log('Función generarPDFEntrega INVOCADA con ID:', solicitudId); // NUEVO LOG
+
     // Buscar la solicitud
     const solicitud = solicitudes.find(s => s.id === solicitudId);
+    console.log('Solicitud encontrada en generarPDFEntrega:', solicitud); // NUEVO LOG
     if (!solicitud) {
-        mostrarAlerta('No se encontró la solicitud.', 'danger');
+        mostrarAlerta('No se encontró la solicitud para generar PDF.', 'danger'); // Mensaje un poco diferente para distinguir
+        console.error('No se encontró la solicitud con ID:', solicitudId, 'en el array global "solicitudes"');
         return;
     }
     
