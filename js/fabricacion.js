@@ -453,11 +453,16 @@ function generarPDFEntrega(solicitudId) {
         return;
     }
     
-    // Verificar que la solicitud esté en estado "Entregado"
+    // --- INICIO DE LA MODIFICACIÓN ---
+    // Se elimina o comenta la siguiente condición para permitir generar el PDF
+    // en estados diferentes a 'Entregado'.
+    /*
     if (solicitud.estado !== 'Entregado') {
         mostrarAlerta('Solo se pueden generar guías para solicitudes entregadas.', 'warning');
         return;
     }
+    */
+    // --- FIN DE LA MODIFICACIÓN ---
     
     // Mostrar loading mientras se genera el PDF
     mostrarSincronizacion('Generando PDF...');
@@ -822,3 +827,6 @@ function generarContenidoGuiaEntrega(solicitud) {
         </div>
     `;
 }
+
+// Opcional: Exponer generarPDFEntrega globalmente si es necesario para app.js
+// window.generarPDFEntrega = generarPDFEntrega;
