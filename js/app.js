@@ -268,13 +268,14 @@ function handleActualizarEstadoConUsuario(solicitudId, nuevoEstado, observacione
                     ocultarSincronizacion();
                     // updateCurrentView(); // Se actualiza automáticamente por el listener de Firebase
 
-                    // --- INICIO DE LA MODIFICACIÓN ---
-                    // Generar PDF si el nuevo estado es "En fabricación"
+                    // --- INICIO DE LA MODIFICACIÓN CON CONSOLE.LOGS ---
                     if (nuevoEstado === 'En fabricación') {
+                        console.log('Estado cambiado a "En fabricación". Intentando generar PDF para solicitud ID:', solicitudId); // LOG AÑADIDO
                         if (typeof generarPDFEntrega === 'function') {
+                            console.log('Llamando a generarPDFEntrega directamente.'); // LOG AÑADIDO
                             generarPDFEntrega(solicitudId);
                         } else if (typeof window.generarPDFEntrega === 'function') { 
-                            // Si la expusiste explícitamente en window en fabricacion.js
+                            console.log('Llamando a window.generarPDFEntrega.'); // LOG AÑADIDO
                             window.generarPDFEntrega(solicitudId);
                         } else {
                             console.warn('La función generarPDFEntrega no está disponible globalmente.');
