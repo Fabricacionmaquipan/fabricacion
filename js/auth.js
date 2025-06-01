@@ -15,20 +15,21 @@ const userDisplayName = document.getElementById('user-display-name');
 const userRoleDisplay = document.getElementById('user-role-display');
 
 // Base de datos de usuarios (en producción esto estaría en Firebase)
-// MODIFICADO: Nombres de usuario simplificados y añadido Visualizador
 const usuarios = [
     { username: 'bodega', password: 'Bodega2025', role: 'bodega', displayName: 'Usuario Bodega' },
     { username: 'fabricacion', password: 'Pelaoyjoel', role: 'fabricacion', displayName: 'Usuario Fabricación' },
     { username: 'admin', password: 'Mono1700..', role: 'admin', displayName: 'Administrador' },
-    // NUEVO: Usuario Visualizador
-    { username: 'viewer', password: 'viewer123', role: 'visualizador', displayName: 'Usuario Visualizador' }
+    // Puedes agregar más usuarios según sea necesario
 ];
 
 // Configurar event listeners relacionados con autenticación
 function setupAuthListeners() {
+    // Evento de inicio de sesión
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
     }
+    
+    // También permitir iniciar sesión presionando Enter
     if (passwordInput) {
         passwordInput.addEventListener('keyup', (e) => {
             if (e.key === 'Enter') {
@@ -36,16 +37,23 @@ function setupAuthListeners() {
             }
         });
     }
+    
+    // Cambiar campos requeridos según el rol seleccionado
     if (roleSelect) {
         roleSelect.addEventListener('change', updateLoginForm);
     }
+    
+    // Evento de cierre de sesión
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
     }
 }
 
+// Actualizar el formulario según el rol seleccionado
 function updateLoginForm() {
     const selectedRole = roleSelect.value;
+    
+    // Mostrar pistas de campos según el rol
     if (usernameInput) {
         switch (selectedRole) {
             case 'bodega':
@@ -57,16 +65,13 @@ function updateLoginForm() {
             case 'admin':
                 usernameInput.placeholder = 'Usuario administrador';
                 break;
-            // NUEVO: Placeholder para Visualizador
-            case 'visualizador':
-                usernameInput.placeholder = 'Usuario visualizador';
-                break;
             default:
                 usernameInput.placeholder = 'Nombre de usuario';
         }
     }
 }
 
+// Manejar el inicio de sesión
 function handleLogin(e) {
     if (e) e.preventDefault();
     
@@ -74,18 +79,23 @@ function handleLogin(e) {
     const password = passwordInput.value;
     const selectedRole = roleSelect.value;
     
+    // Validar que todos los campos estén completos
     if (!username || !password || !selectedRole) {
         if (!username) highlightInvalidField(usernameInput);
         if (!password) highlightInvalidField(passwordInput);
         if (!selectedRole) highlightInvalidField(roleSelect);
+        
         mostrarAlerta('Por favor, completa todos los campos.', 'warning');
         return;
     }
     
+    // Mostrar animación de carga
     loginButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Verificando...';
     loginButton.disabled = true;
     
+    // Simular validación en el servidor
     setTimeout(() => {
+        // Buscar usuario y validar credenciales
         const usuario = usuarios.find(u => 
             u.username === username && 
             u.password === password && 
@@ -93,239 +103,228 @@ function handleLogin(e) {
         );
         
         if (usuario) {
+            // Iniciar sesión
             currentUser = usuario;
             currentRole = usuario.role;
             
+            // Guardar en localStorage (solo el nombre de usuario y rol por seguridad)
             const sessionData = {
                 username: usuario.username,
                 role: usuario.role,
-                displayName: usuario.displayName, // NUEVO: Guardar displayName en sesión
                 lastLogin: new Date().toISOString()
             };
             localStorage.setItem('session_data', JSON.stringify(sessionData));
             
-            showPanel(currentRole); // Esto llamará a configureAppForRole desde app.js
+            // Mostrar panel correspondiente
+            showPanel(currentRole);
             
+            // Mostrar mensaje de bienvenida
             mostrarAlerta(`Bienvenido, ${usuario.displayName}`, 'success');
         } else {
+            // Credenciales incorrectas
             loginButton.innerHTML = 'Ingresar <i class="fas fa-sign-in-alt ms-1"></i>';
             loginButton.disabled = false;
+            
+            // Destacar campos y mostrar error
             highlightInvalidField(usernameInput);
             highlightInvalidField(passwordInput);
             highlightInvalidField(roleSelect);
+            
+            // Limpiar contraseña para reintento
             passwordInput.value = '';
+            
             mostrarAlerta('Credenciales incorrectas. Por favor, verifica tu usuario, contraseña y rol.', 'danger');
         }
     }, 800);
 }
 
+// Resaltar campo inválido con animación
 function highlightInvalidField(field) {
     field.classList.add('is-invalid');
+    
     setTimeout(() => {
         field.classList.remove('is-invalid');
     }, 3000);
 }
 
+// Manejar el cierre de sesión
 function handleLogout() {
+    // Confirmar antes de cerrar sesión
     if (confirm('¿Estás seguro que deseas cerrar sesión?')) {
+        // Limpiar datos de sesión
         currentUser = null;
         currentRole = '';
         localStorage.removeItem('session_data');
+        
+        // Limpiar formulario de login
         if (loginForm) loginForm.reset();
+        
+        // Mostrar pantalla de login
         showLoginScreen();
+        
+        // Mostrar mensaje de despedida
         mostrarAlerta('Has cerrado sesión correctamente.', 'info');
     }
 }
 
+// Comprobar si hay una sesión activa
 function checkExistingSession() {
     const sessionData = localStorage.getItem('session_data');
+    
     if (sessionData) {
         try {
             const session = JSON.parse(sessionData);
+            
+            // Verificar si la sesión tiene los datos necesarios
             if (session.username && session.role) {
-                // MODIFICADO: Buscar usuario también por displayName si se guardó
+                // Buscar el usuario en la base de datos
                 const usuario = usuarios.find(u => 
                     u.username === session.username && 
-                    u.role === session.role &&
-                    (session.displayName ? u.displayName === session.displayName : true) 
+                    u.role === session.role
                 );
                 
                 if (usuario) {
+                    // Restaurar sesión
                     currentUser = usuario;
                     currentRole = usuario.role;
-                    showPanel(currentRole); // Esto llamará a configureAppForRole
+                    
+                    // Mostrar panel correspondiente
+                    showPanel(currentRole);
                     return true;
-                } else {
-                     // Si no se encuentra el usuario exacto (ej. displayName cambió o no estaba en sesión vieja)
-                    // Tratar de encontrar solo por username y role para compatibilidad,
-                    // pero idealmente forzar nuevo login si los datos no son consistentes.
-                    const basicUser = usuarios.find(u => u.username === session.username && u.role === session.role);
-                    if (basicUser) {
-                         currentUser = basicUser;
-                         currentRole = basicUser.role;
-                         showPanel(currentRole);
-                         return true;
-                    }
                 }
             }
         } catch (error) {
             console.error('Error al restaurar sesión:', error);
-            localStorage.removeItem('session_data'); // Limpiar sesión corrupta
         }
     }
+    
     return false;
 }
 
+// Mostrar la pantalla de inicio de sesión
 function showLoginScreen() {
     const bodegaPanel = document.getElementById('bodega-panel');
     const fabricacionPanel = document.getElementById('fabricacion-panel');
     const adminPanel = document.getElementById('admin-panel');
     
+    // Ocultar todos los paneles con animación
     if (bodegaPanel) fadeOut(bodegaPanel);
     if (fabricacionPanel) fadeOut(fabricacionPanel);
     if (adminPanel) fadeOut(adminPanel);
     
-    if (logoutBtn) logoutBtn.style.display = 'none';
-    if (userInfo) userInfo.style.display = 'none';
+    // Ocultar elementos de navegación
+    logoutBtn.style.display = 'none';
+    userInfo.style.display = 'none';
     
+    // Mostrar pantalla de login con animación
     setTimeout(() => {
-        if (loginScreen) {
-            loginScreen.style.display = 'block';
-            fadeIn(loginScreen);
-        }
-        if (usernameInput) {
-             setTimeout(() => { usernameInput.focus(); }, 300);
-        }
+        loginScreen.style.display = 'block';
+        fadeIn(loginScreen);
+        
+        // Focus en el primer campo
+        setTimeout(() => {
+            usernameInput.focus();
+        }, 300);
     }, 300);
 }
 
-// MODIFICADO: showPanel ahora llama a configureAppForRole (de app.js) para configurar la UI específica del rol
+// Mostrar el panel según el rol seleccionado
 function showPanel(role) {
     const bodegaPanel = document.getElementById('bodega-panel');
     const fabricacionPanel = document.getElementById('fabricacion-panel');
     const adminPanel = document.getElementById('admin-panel');
     
-    if (loginScreen) fadeOut(loginScreen);
+    // Ocultar login screen con animación
+    fadeOut(loginScreen);
     
-    if (logoutBtn) logoutBtn.style.display = 'flex'; // Cambiado a flex para alinear con el original
-    if (userInfo) userInfo.style.display = 'block'; // O 'flex' si es necesario para su layout
+    // Mostrar elementos de navegación
+    logoutBtn.style.display = 'block';
+    userInfo.style.display = 'block';
     
-    if (currentUser && userDisplayName) userDisplayName.textContent = currentUser.displayName;
-    if (userRoleDisplay) userRoleDisplay.textContent = getRoleName(role);
+    // Actualizar información de usuario
+    userDisplayName.textContent = currentUser.displayName;
+    userRoleDisplay.textContent = getRoleName(role);
     
-    if (loginButton) {
-        loginButton.innerHTML = 'Ingresar <i class="fas fa-sign-in-alt ms-1"></i>';
-        loginButton.disabled = false;
-    }
+    // Restaurar botón de login
+    loginButton.innerHTML = 'Ingresar <i class="fas fa-sign-in-alt ms-1"></i>';
+    loginButton.disabled = false;
     
-    // Ocultar todos los paneles principales primero
-    if (bodegaPanel) bodegaPanel.style.display = 'none';
-    if (fabricacionPanel) fabricacionPanel.style.display = 'none';
-    if (adminPanel) adminPanel.style.display = 'none';
-
+    // Mostrar el panel correspondiente con animación
     setTimeout(() => {
-        let panelToShow = null;
         switch (role) {
             case 'bodega':
-                panelToShow = bodegaPanel;
-                if (typeof cargarDatosBodega === 'function') cargarDatosBodega();
+                bodegaPanel.style.display = 'block';
+                fabricacionPanel.style.display = 'none';
+                adminPanel.style.display = 'none';
+                fadeIn(bodegaPanel);
+                cargarDatosBodega();
                 break;
             case 'fabricacion':
-                panelToShow = fabricacionPanel;
-                if (typeof cargarDatosFabricacion === 'function') cargarDatosFabricacion();
+                bodegaPanel.style.display = 'none';
+                fabricacionPanel.style.display = 'block';
+                adminPanel.style.display = 'none';
+                fadeIn(fabricacionPanel);
+                cargarDatosFabricacion();
                 break;
             case 'admin':
-                panelToShow = adminPanel;
-                if (typeof cargarDatosAdmin === 'function') cargarDatosAdmin();
-                break;
-            // NUEVO: Caso para Visualizador
-            case 'visualizador':
-                panelToShow = adminPanel; // El visualizador verá una versión del panel de admin
-                if (typeof cargarDatosAdmin === 'function') cargarDatosAdmin(); // Carga los datos como admin
+                bodegaPanel.style.display = 'none';
+                fabricacionPanel.style.display = 'none';
+                adminPanel.style.display = 'block';
+                fadeIn(adminPanel);
+                cargarDatosAdmin();
                 break;
         }
-
-        if (panelToShow) {
-            panelToShow.style.display = 'block';
-            fadeIn(panelToShow);
-        }
-        
-        // NUEVO: Llamar a la función de configuración de UI específica del rol en app.js
-        if (typeof configureAppForRole === 'function') {
-            configureAppForRole(role);
-        } else {
-            console.warn("configureAppForRole no está definida en app.js. La UI específica del rol no se aplicará.");
-        }
-
     }, 300);
 }
 
-
-// MODIFICADO: getRoleName para incluir Visualizador
+// Obtener nombre amigable del rol
 function getRoleName(role) {
     switch (role) {
         case 'bodega': return 'Bodega';
         case 'fabricacion': return 'Fabricación';
         case 'admin': return 'Administrador';
-        // NUEVO: Nombre para Visualizador
-        case 'visualizador': return 'Visualizador';
         default: return 'Usuario';
     }
 }
 
+// Animación de fade in
 function fadeIn(element) {
-    if (!element) return;
     element.style.opacity = '0';
     element.style.transition = 'opacity 0.3s ease';
+    
     setTimeout(() => {
         element.style.opacity = '1';
     }, 10);
 }
 
+// Animación de fade out
 function fadeOut(element) {
-    if (!element) return;
     element.style.opacity = '1';
     element.style.transition = 'opacity 0.3s ease';
+    
     element.style.opacity = '0';
+    
     setTimeout(() => {
         element.style.display = 'none';
     }, 300);
 }
 
+// Obtener el usuario actual
 function getCurrentUser() {
     return currentUser;
 }
 
-// MODIFICADO: hasPermission para el rol Visualizador
+// Verificar si el usuario tiene permisos para una acción
 function hasPermission(action) {
     if (!currentUser) return false;
     
-    // Para el rol 'visualizador', negamos explícitamente la mayoría de las acciones.
-    // Solo permitimos acciones de 'ver'.
-    if (currentUser.role === 'visualizador') {
-        const visualizadorPermissions = [
-            'ver_solicitudes_admin', // Permiso para ver la tabla de solicitudes
-            'ver_detalle_solicitud'  // Permiso para ver el modal de detalle
-            // Podrías añadir 'ver_repuestos_admin' si decides mostrarles la tabla de repuestos
-        ];
-        return visualizadorPermissions.includes(action);
-    }
-
+    // Definir permisos por rol
     const permisos = {
-        'bodega': ['crear_solicitud', 'ver_solicitudes_bodega', 'ver_detalle_solicitud'],
-        'fabricacion': ['ver_solicitudes_fabricacion', 'cambiar_estado', 'ver_detalle_solicitud', 'descargar_pdf_entrega'],
-        'admin': [
-            'ver_solicitudes_admin', 'cambiar_estado', 'eliminar_solicitud', 
-            'exportar_datos', 'ver_estadisticas', 'ver_detalle_solicitud',
-            'gestionar_usuarios', 'gestionar_repuestos', 'ver_dashboard',
-            'generar_reportes', 'ver_auditoria'
-        ]
-        // No es necesario listar explícitamente los permisos del visualizador aquí si se maneja arriba.
+        'bodega': ['crear_solicitud', 'ver_solicitudes_bodega'],
+        'fabricacion': ['ver_solicitudes', 'cambiar_estado'],
+        'admin': ['ver_solicitudes', 'cambiar_estado', 'eliminar_solicitud', 'exportar_datos', 'ver_estadisticas']
     };
     
     const permisosUsuario = permisos[currentUser.role] || [];
     return permisosUsuario.includes(action);
 }
-
-// Si setupAuthListeners() se llama desde app.js, no es necesario llamarlo aquí al final.
-// document.addEventListener('DOMContentLoaded', setupAuthListeners);
